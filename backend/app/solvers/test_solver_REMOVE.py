@@ -1,38 +1,27 @@
 # from backend:
 # uv run python -m app.solvers.test_solver_REMOVE
 
+import json
+from typing import Any
+
 from app.adapters.client_a import parse_request, format_response
 from app.solvers.cpsat import solve
 from app.validation import validate
 from app.kpis import compute_kpis
-import json
 
-# simple = {
-#   'horizon': {'start': '2025-11-03T08:00:00', 'end': '2025-11-03T16:00:00'},
-#   'resources': [
-#     {'id': 'Fill-1', 'capabilities': ['fill'],
-#      'calendar': [['2025-11-03T08:00:00', '2025-11-03T16:00:00']]},
-#     {'id': 'Label-1', 'capabilities': ['label'],
-#      'calendar': [['2025-11-03T08:00:00', '2025-11-03T16:00:00']]}
-#   ],
-#   'products': [
-#     {'id': 'P-100', 'family': 'standard', 'due': '2025-11-03T12:30:00',
-#      'route': [
-#        {'capability': 'fill', 'duration_minutes': 30},
-#        {'capability': 'label', 'duration_minutes': 20}
-#      ]}
-#   ],
-#   'changeover_matrix_minutes': {'values': {
-#     'standard->standard': 0, 'standard->premium': 20,
-#     'premium->standard': 20, 'premium->premium': 0}},
-#   'settings': {'time_limit_seconds': 5, 'objective_mode': 'min_tardiness'}
-# }
+def RunSolver(data: Any, verbose: bool =False):
+    problem = parse_request(data)
+    solution = solve(problem)
+    kpis = compute_kpis(problem, solution)
+    if verbose:
+        print(json.dumps(format_response(solution, kpis=kpis), indent=2))
+        print("-" * 50)
+    validate(problem, solution)
+    
+    return solution
 
-with open("..\\.data\\example.json") as f:
-    simple = json.load(f)
-
-problem = parse_request(simple)
-solution = solve(problem)
-kpis = compute_kpis(problem, solution)
-print(json.dumps(format_response(solution, kpis=kpis), indent=2))
-validate(problem, solution)
+if __name__ == "__main__":
+    with open("..\\.data\\example.json") as f:
+        data = json.load(f)
+    
+    RunSolver(data, True)
