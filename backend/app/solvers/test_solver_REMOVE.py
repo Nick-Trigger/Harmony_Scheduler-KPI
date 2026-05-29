@@ -33,6 +33,6 @@ with open("..\\.data\\example.json") as f:
 
 problem = parse_request(simple)
 solution = solve(problem)
-validate(problem, solution)
 kpis = compute_kpis(problem, solution)
 print(json.dumps(format_response(solution, kpis=kpis), indent=2))
+validate(problem, solution)
