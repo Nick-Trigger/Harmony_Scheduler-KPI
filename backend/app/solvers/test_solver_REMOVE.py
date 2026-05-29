@@ -3,6 +3,7 @@
 
 from app.adapters.client_a import parse_request, format_response
 from app.solvers.cpsat import solve
+from app.kpis import compute_kpis
 import json
 
 # simple = {
@@ -31,4 +32,5 @@ with open("..\\.data\\example.json") as f:
 
 problem = parse_request(simple)
 solution = solve(problem)
-print(json.dumps(format_response(solution, kpis={}), indent=2))
+kpis = compute_kpis(problem, solution)
+print(json.dumps(format_response(solution, kpis=kpis), indent=2))
