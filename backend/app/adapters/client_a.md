@@ -60,7 +60,7 @@
   "assignments": [
     {
       "product": "products.id",
-      "step_index": int,
+      "step_index": int, // 1-indexed
       "capability": "capability",
       "resource": "resources.id",
       "start": "datetime",

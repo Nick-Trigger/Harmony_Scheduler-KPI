@@ -5,7 +5,7 @@ returns a feasible schedule plus KPIs. Built with FastAPI and OR-Tools CP-SAT.
 
 ## Architecture
 
-```
+```txt
 backend/app/
 ├── api/                     # FastAPI route handlers (thin — no business logic)
 │   └── schedule.py             # POST /schedule
@@ -17,7 +17,8 @@ backend/app/
 │   └── solution.py             # Solution, Assignment
 ├── solvers/                 # Constraint solvers
 │   ├── base.py                 # Solver protocol
-│   └── cpsat.py                # OR-Tools CP-SAT implementation
+│   ├── cpsat.py                # OR-Tools CP-SAT implementation
+│   └── _{globalHelpers}.py
 ├── objectives/              # Objective functions (e.g. min_tardiness)
 │   ├── base.py                 # Objective protocol
 │   └── min_tardiness.py        
@@ -27,7 +28,7 @@ backend/app/
 
 ## Request flow
 
-```
+```txt
 JSON request
 → adapters/client_a.py      (parse → canonical SchedulingProblem)
 → solvers/cpsat.py          (solve → canonical Solution)
