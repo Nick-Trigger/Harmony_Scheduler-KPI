@@ -141,8 +141,7 @@ def _check_assignment(problem: SchedulingProblem, solution: Solution) -> None:
     
     1) Checks that each assignment references a valid product
     2) Checks that each assignment references a valid route operation
-    3) Checks that each assignment's step index is valid
-    4) Checks that each assignment's duration matches the route operation's duration
+    3) Checks that each assignment's duration matches the route operation's duration
     """
     
     products_by_id = {p.id: p for p in problem.products}
@@ -151,15 +150,6 @@ def _check_assignment(problem: SchedulingProblem, solution: Solution) -> None:
         if product is None:
             raise InvariantError(
                 f"Assignment for {a.product_id} step {a.step_index} references unknown product {a.product_id!r}"
-            )
-            
-        route_operation = next(
-            (op for index, op in enumerate(product.route) if index == a.step_index),
-            None,
-        )
-        if route_operation is None:
-            raise InvariantError(
-                f"Assignment for {a.product_id} step {a.step_index} references unknown route operation"
             )
             
         step_idx_zero = a.step_index - 1

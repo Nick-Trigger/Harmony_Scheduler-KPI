@@ -12,9 +12,6 @@ import app.objectives #registers objective functions
 from app.objectives.base import get as get_objective
 
 
-# %% Operation Variables
-
-
 # %% Solver Entry
 
 
