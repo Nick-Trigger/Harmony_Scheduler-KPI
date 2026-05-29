@@ -54,7 +54,7 @@ def solve(problem: SchedulingProblem) -> Solution:
             model.add_no_overlap(intervals)
             
     # --- Constraint: changeover times ---
-    _add_changeover_constraints(model, op_vars, problem, horizon_end_min)
+    _add_changeover_constraints(model, op_vars, problem)
 
     # --- Objective: pluggable via objective_mode ---
     objective_fn = get_objective(problem.settings.objective_mode)
@@ -193,7 +193,6 @@ def _add_changeover_constraints(
     model: cp_model.CpModel,
     op_vars: list[OpVars],
     problem: SchedulingProblem,
-    horizon_end_min: int,
 ) -> None:
     """
     Enforce family-dependent setup time between ops on the same resource.
@@ -207,31 +206,44 @@ def _add_changeover_constraints(
     """
 
     matrix = problem.changeover_matrix
+    n = len(op_vars)
 
-    for i, op_i in enumerate(op_vars):
-        for j, op_j in enumerate(op_vars):
-            if i == j:
-                continue
-            if op_i.product_id != op_j.product_id: # handled by precedence constraints; also it is not possible for ops to share a resource if they are from the same product, since each product's route is sequential.
+    for i in range(n):
+        for j in range(i+1, n):
+            op_i = op_vars[i]
+            op_j = op_vars[j]
+            
+            if op_i.product_id == op_j.product_id:  # handled by precedence constraints; also it is not possible for ops to share a resource if they are from the same product, since each product's route is sequential.
                 continue
             
             # resource where both ops can run
             common_resources = {r_id for (r_id, _) in op_i.presences} & {r_id for (r_id, _) in op_j.presences}
+            if not common_resources:
+                continue
             
-            setup = matrix.setup_minutes(op_i.family, op_j.family)
-            if setup == 0:
-                continue # no need to add a constraint for same-family transitions, since the no-overlap constraint already enforces that.
+            setup_ij = matrix.setup_minutes(op_i.family, op_j.family)
+            setup_ji = matrix.setup_minutes(op_j.family, op_i.family)
+            if setup_ij == 0 and setup_ji == 0:
+                continue  # no need to add a constraint for same-family transitions, since the no-overlap constraint already enforces that.
             
             for r_id in common_resources:
-                i_on_r = _resource_presence(model, op_i, r_id) #is op_i present on r?
-                j_on_r = _resource_presence(model, op_j, r_id) #is op_j present on r?
-                i_before_j = model.new_bool_var( # is op_i scheduled before op_j on r?
+                i_on_r = _resource_presence(model, op_i, r_id)  # is op_i present on r?
+                j_on_r = _resource_presence(model, op_j, r_id)  # is op_j present on r?
+                i_before_j = model.new_bool_var(  # is op_i scheduled before op_j on r?
                     f"co_{op_i.product_id}s{op_i.step_index}_before_{op_j.product_id}_s{op_j.step_index}_on_{r_id}"
                 )
                 
-            model.add(
-                op_j.start >= op_i.end + setup
-            ).only_enforce_if([i_on_r, j_on_r, i_before_j]) # if both ops are on r and op_i is before op_j, then enforce the changeover time.
+                # if both ops are on r and op_i is the earlier one, enforce setup before op_j
+                if setup_ij > 0:
+                    model.add(
+                        op_j.start >= op_i.end + setup_ij
+                    ).only_enforce_if([i_on_r, j_on_r, i_before_j])
+                    
+                # if both ops are on r and op_j is the earlier one, enforce setup before op_i
+                if setup_ji > 0:
+                    model.add(
+                        op_i.start >= op_j.end + setup_ji
+                    ).only_enforce_if([i_on_r, j_on_r, i_before_j.Not()])
 
 
 def _extract_solution(
