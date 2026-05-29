@@ -9,7 +9,6 @@ dependencies = [
     "ortools>=9.15.6755",
     "pydantic-settings>=2.14.1",
     "python-dotenv>=1.2.2",
-    "tqdm>=4.67.3",
     "uvicorn[standard]>=0.48.0",
 ]
 

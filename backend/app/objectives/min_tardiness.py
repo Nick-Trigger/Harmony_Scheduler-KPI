@@ -13,7 +13,7 @@ def add_to_model(
 ) -> None:
     "Minimize sum over products of max(0, last_op.end - due) in minutes."
     horizon_end_min = to_minutes(problem.horizon.end, problem.horizon.start)
-    
+
     last_op_by_product: dict[str, OpVars] = {}
     for ov in op_vars:
         prev = last_op_by_product.get(ov.product_id)
@@ -31,6 +31,7 @@ def add_to_model(
         tardiness_vars.append(tardiness)
 
     model.minimize(sum(tardiness_vars))
-    
+
+
 # Register at import:
 register("min_tardiness", add_to_model)

@@ -7,7 +7,6 @@ from app.kpis import compute_kpis
 from app.solvers.cpsat import solve
 from app.validation import validate
 
-
 router = APIRouter()
 
 
