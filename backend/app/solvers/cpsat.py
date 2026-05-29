@@ -3,10 +3,12 @@ from dataclasses import dataclass
 from ortools.sat.python import cp_model
 
 from app.solvers.base import InfeasibleError
+from app.validation import InvariantError
 from app.domain.problem import Operation, Product, Resource, SchedulingProblem
 from app.domain.solution import Assignment, Solution
 from app.solvers._time import from_minutes, to_minutes
 from app.solvers._op_vars import OpVars
+from app.solvers._diagnostics import diagnose_infeasibility
 
 import app.objectives #registers objective functions
 from app.objectives.base import get as get_objective
@@ -68,9 +70,12 @@ def solve(problem: SchedulingProblem) -> Solution:
     status = solver.solve(model)
 
     if status == cp_model.INFEASIBLE:
-        raise InfeasibleError(["solver reports the model is infeasible"])
+        reasons = diagnose_infeasibility(problem)
+        if len(reasons) == 0:
+            raise InfeasibleError(["solver reports the model is infeasible but no specific reasons were found"])
+        raise InfeasibleError(["solver reports the model is infeasible. Reasons:"] + reasons)
     if status == cp_model.MODEL_INVALID:
-        raise InfeasibleError(["solver reports the model is invalid"])
+        raise InvariantError("solver reports the model is invalid")
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         raise InfeasibleError(
             ["solver did not find a feasible solution within the time limit"]
