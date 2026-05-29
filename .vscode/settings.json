@@ -1,0 +1,7 @@
+{
+    "python.analysis.extraPaths": ["./backend"],
+    "python.defaultInterpreterPath": "./backend/.venv/Scripts/python.exe",
+    "python.analysis.typeCheckingMode": "basic",
+    "files.autoSave": "onFocusChange",
+    "files.autoSaveDelay": 1000
+}

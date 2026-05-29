@@ -1,0 +1,126 @@
+# =============================================================================
+# Secrets & environment
+# =============================================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.dev-state.json
+
+# =============================================================================
+# Python / Backend
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# uv
+.uv/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+pip-wheel-metadata/
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Type checkers / linters
+.mypy_cache/
+.pyright/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# =============================================================================
+# Node / Frontend
+# =============================================================================
+node_modules/
+.pnp
+.pnp.js
+.yarn/
+
+# Build output
+dist/
+dist-ssr/
+build/
+.next/
+out/
+
+# Vite
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =============================================================================
+# Database
+# =============================================================================
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+
+# Local Postgres data (if you ever bind-mount instead of using a named volume)
+postgres-data/
+pgdata/
+
+# =============================================================================
+# Docker
+# =============================================================================
+docker-compose.override.yml
+
+# =============================================================================
+# Editors / IDEs
+# =============================================================================
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+
+# =============================================================================
+# Operating system
+# =============================================================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+ehthumbs.db
+
+# =============================================================================
+# Misc
+# =============================================================================
+*.log
+.cache/
+tmp/
+temp/
