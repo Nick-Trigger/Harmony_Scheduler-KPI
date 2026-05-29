@@ -2,30 +2,17 @@ from dataclasses import dataclass
 
 from ortools.sat.python import cp_model
 
+from app.solvers.base import InfeasibleError
 from app.domain.problem import Operation, Product, Resource, SchedulingProblem
 from app.domain.solution import Assignment, Solution
 from app.solvers._time import from_minutes, to_minutes
-from app.solvers.base import InfeasibleError
+from app.solvers._op_vars import OpVars
+
+import app.objectives #registers objective functions
+from app.objectives.base import get as get_objective
+
 
 # %% Operation Variables
-
-
-@dataclass
-class _OpVars:
-    "CP-SAT variables for one operation in one product's route."
-
-    product_id: str
-    step_index: int  # 1-based to match wire format
-    capability: str
-    family: str
-    duration: int
-
-    start: cp_model.IntVar  # minutes since horizon start
-    end: cp_model.IntVar
-
-    # One optional interval per eligible resource. Exactly one is present.
-    presences: dict[tuple[str, int], cp_model.IntVar]
-    intervals: dict[tuple[str, int], cp_model.IntervalVar]
 
 
 # %% Solver Entry
@@ -38,7 +25,7 @@ def solve(problem: SchedulingProblem) -> Solution:
     model = cp_model.CpModel()
 
     # Build operation variables and collect them per resource for no-overlap.
-    op_vars: list[_OpVars] = [] 
+    op_vars: list[OpVars] = [] 
     intervals_per_resource: dict[str, list[cp_model.IntervalVar]] = {
         r.id: [] for r in problem.resources
     }
@@ -55,22 +42,23 @@ def solve(problem: SchedulingProblem) -> Solution:
                 horizon_end_min=horizon_end_min,
             )
             op_vars.append(ov)
-            for (resource_id, _w_idx), interval in ov.intervals.items():
+            for (resource_id, _), interval in ov.intervals.items():
                 intervals_per_resource[resource_id].append(interval)
 
     # --- Constraint: precedence within each product's route ---
     _add_precedence_constraints(model, op_vars, problem.products)
 
     # --- Constraint: no overlap on each resource ---
-    for resource_id, intervals in intervals_per_resource.items():
+    for intervals in intervals_per_resource.values():
         if intervals:
             model.add_no_overlap(intervals)
             
     # --- Constraint: changeover times ---
     _add_changeover_constraints(model, op_vars, problem, horizon_end_min)
 
-    # --- Objective: minimize total tardiness ---
-    _add_min_tardiness_objective(model, op_vars, problem, horizon_end_min)
+    # --- Objective: pluggable via objective_mode ---
+    objective_fn = get_objective(problem.settings.objective_mode)
+    objective_fn(model, op_vars, problem)
 
     # Solve
     solver = cp_model.CpSolver()
@@ -105,7 +93,7 @@ def _build_op_vars(
     resources: tuple[Resource, ...],
     horizon_start,
     horizon_end_min: int,
-) -> _OpVars:
+) -> OpVars:
     eligible = [r for r in resources if operation.capability in r.capabilities]
     if not eligible:
         raise InfeasibleError(
@@ -157,7 +145,7 @@ def _build_op_vars(
 
     model.add_exactly_one(list(presences.values()))
 
-    return _OpVars(
+    return OpVars(
         product_id=product.id,
         step_index=step_index,
         capability=operation.capability,
@@ -172,11 +160,11 @@ def _build_op_vars(
 
 def _add_precedence_constraints(
     model: cp_model.CpModel,
-    op_vars: list[_OpVars],
+    op_vars: list[OpVars],
     products: tuple[Product, ...],
 ) -> None:
     "Each step in a product's route starts at or after the previous step ends."
-    by_product: dict[str, list[_OpVars]] = {p.id: [] for p in products}
+    by_product: dict[str, list[OpVars]] = {p.id: [] for p in products}
     for ov in op_vars:
         by_product[ov.product_id].append(ov)
 
@@ -185,34 +173,7 @@ def _add_precedence_constraints(
         for prev, curr in zip(steps, steps[1:]):
             model.add(curr.start >= prev.end)
 
-
-def _add_min_tardiness_objective(
-    model: cp_model.CpModel,
-    op_vars: list[_OpVars],
-    problem: SchedulingProblem,
-    horizon_end_min: int,
-) -> None:
-    "Minimize sum over products of max(0, last_op.end - due)."
-    last_op_by_product: dict[str, _OpVars] = {}
-    for ov in op_vars:
-        prev = last_op_by_product.get(ov.product_id)
-        if prev is None or ov.step_index > prev.step_index:
-            last_op_by_product[ov.product_id] = ov
-
-    tardiness_vars: list[cp_model.IntVar] = []
-    for product in problem.products:
-        last = last_op_by_product[product.id]
-        due_min = to_minutes(product.due, problem.horizon.start)
-        # tardiness = max(0, end - due)
-        tardiness = model.new_int_var(0, horizon_end_min, f"tardy_{product.id}")
-        model.add(tardiness >= last.end - due_min)
-        # tardiness >= 0 is implicit from the var's lower bound.
-        tardiness_vars.append(tardiness)
-
-    model.minimize(sum(tardiness_vars))
-
-
-def _resource_presence(model: cp_model.CpModel, op_vars: _OpVars, resource_id: str) -> cp_model.IntVar:
+def _resource_presence(model: cp_model.CpModel, op_vars: OpVars, resource_id: str) -> cp_model.IntVar:
     "return a BoolVar = true if 'op_vars' is assigned to 'resource_id' on any window, false otherwise."
     
     window_presences = [p for (r_id, _), p in op_vars.presences.items() if r_id == resource_id]
@@ -230,7 +191,7 @@ def _resource_presence(model: cp_model.CpModel, op_vars: _OpVars, resource_id: s
 
 def _add_changeover_constraints(
     model: cp_model.CpModel,
-    op_vars: list[_OpVars],
+    op_vars: list[OpVars],
     problem: SchedulingProblem,
     horizon_end_min: int,
 ) -> None:
@@ -275,7 +236,7 @@ def _add_changeover_constraints(
 
 def _extract_solution(
     solver: cp_model.CpSolver,
-    op_vars: list[_OpVars],
+    op_vars: list[OpVars],
     horizon_start,
 ) -> Solution:
     "Pull the chosen assignments out of the solver."
