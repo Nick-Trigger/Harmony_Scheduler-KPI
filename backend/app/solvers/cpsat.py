@@ -17,6 +17,7 @@ class _OpVars:
     product_id: str
     step_index: int  # 1-based to match wire format
     capability: str
+    family: str
     duration: int
 
     start: cp_model.IntVar  # minutes since horizon start
@@ -29,6 +30,7 @@ class _OpVars:
 
 # %% Solver Entry
 
+
 def solve(problem: SchedulingProblem) -> Solution:
     horizon_start = problem.horizon.start
     horizon_end_min = to_minutes(problem.horizon.end, horizon_start)
@@ -36,7 +38,7 @@ def solve(problem: SchedulingProblem) -> Solution:
     model = cp_model.CpModel()
 
     # Build operation variables and collect them per resource for no-overlap.
-    op_vars: list[_OpVars] = []
+    op_vars: list[_OpVars] = [] 
     intervals_per_resource: dict[str, list[cp_model.IntervalVar]] = {
         r.id: [] for r in problem.resources
     }
@@ -63,14 +65,17 @@ def solve(problem: SchedulingProblem) -> Solution:
     for resource_id, intervals in intervals_per_resource.items():
         if intervals:
             model.add_no_overlap(intervals)
+            
+    # --- Constraint: changeover times ---
+    _add_changeover_constraints(model, op_vars, problem, horizon_end_min)
 
     # --- Objective: minimize total tardiness ---
     _add_min_tardiness_objective(model, op_vars, problem, horizon_end_min)
 
-    # Solve 
+    # Solve
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = float(problem.settings.time_limit_seconds)
-    
+
     # --- Determinism: fix worker count and random seed. ---
     solver.parameters.num_search_workers = 1
     solver.parameters.random_seed = 42
@@ -105,8 +110,7 @@ def _build_op_vars(
     if not eligible:
         raise InfeasibleError(
             [
-                f"no resource has capability '{operation.capability}' "
-                f"(required by {product.id} step {step_index})"
+                f"no resource has capability '{operation.capability}' (required by {product.id} step {step_index})"
             ]
         )
 
@@ -147,8 +151,7 @@ def _build_op_vars(
         # Every eligible resource's every window is too short.
         raise InfeasibleError(
             [
-                f"no working window long enough for {product.id} step {step_index} "
-                f"({operation.duration_minutes} min on capability '{operation.capability}')"
+                f"no working window long enough for {product.id} step {step_index} ({operation.duration_minutes} min on capability '{operation.capability}')"
             ]
         )
 
@@ -158,6 +161,7 @@ def _build_op_vars(
         product_id=product.id,
         step_index=step_index,
         capability=operation.capability,
+        family=product.family,
         duration=operation.duration_minutes,
         start=start,
         end=end,
@@ -208,6 +212,67 @@ def _add_min_tardiness_objective(
     model.minimize(sum(tardiness_vars))
 
 
+def _resource_presence(model: cp_model.CpModel, op_vars: _OpVars, resource_id: str) -> cp_model.IntVar:
+    "return a BoolVar = true if 'op_vars' is assigned to 'resource_id' on any window, false otherwise."
+    
+    window_presences = [p for (r_id, _), p in op_vars.presences.items() if r_id == resource_id]
+    
+    if len(window_presences) == 1:
+        return window_presences[0]
+    
+    on_r = model.new_bool_var(f"{op_vars.product_id}_s{op_vars.step_index}_{resource_id}") 
+
+    # If any of the window presences is true, then on_r is true. If on_r is true, then at least one of the window presences must be true.
+    model.add_bool_or(window_presences).only_enforce_if(on_r)
+    for p in window_presences:
+        model.add_implication(p, on_r)
+    return on_r
+
+def _add_changeover_constraints(
+    model: cp_model.CpModel,
+    op_vars: list[_OpVars],
+    problem: SchedulingProblem,
+    horizon_end_min: int,
+) -> None:
+    """
+    Enforce family-dependent setup time between ops on the same resource.
+
+    For each ordered pair (i, j) and each resource r that both can run on,
+    if i is on r AND j is on r AND i precedes j, then
+        j.start >= i.end + setup(i.family, j.family).
+
+    Same-family transitions have setup = 0, so the constraint reduces to the
+    no-overlap requirement already enforced elsewhere.
+    """
+
+    matrix = problem.changeover_matrix
+
+    for i, op_i in enumerate(op_vars):
+        for j, op_j in enumerate(op_vars):
+            if i == j:
+                continue
+            if op_i.product_id != op_j.product_id: # handled by precedence constraints; also it is not possible for ops to share a resource if they are from the same product, since each product's route is sequential.
+                continue
+            
+            # resource where both ops can run
+            common_resources = {r_id for (r_id, _) in op_i.presences} & {r_id for (r_id, _) in op_j.presences}
+            
+            setup = matrix.setup_minutes(op_i.family, op_j.family)
+            if setup == 0:
+                continue # no need to add a constraint for same-family transitions, since the no-overlap constraint already enforces that.
+            
+            for r_id in common_resources:
+                i_on_r = _resource_presence(model, op_i, r_id) #is op_i present on r?
+                j_on_r = _resource_presence(model, op_j, r_id) #is op_j present on r?
+                i_before_j = model.new_bool_var( # is op_i scheduled before op_j on r?
+                    f"co_{op_i.product_id}s{op_i.step_index}_before_{op_j.product_id}_s{op_j.step_index}_on_{r_id}"
+                )
+                
+            model.add(
+                op_j.start >= op_i.end + setup
+            ).only_enforce_if([i_on_r, j_on_r, i_before_j]) # if both ops are on r and op_i is before op_j, then enforce the changeover time.
+
+
 def _extract_solution(
     solver: cp_model.CpSolver,
     op_vars: list[_OpVars],
@@ -237,7 +302,7 @@ def _extract_solution(
                 end=from_minutes(end_min, horizon_start),
             )
         )
-
+    
     # Deterministic output: sort by (start, product, step) so identical inputs produce identical responses regardless of dict iteration order.
     assignments.sort(key=lambda a: (a.start, a.product_id, a.step_index))
     return Solution(assignments=tuple(assignments))
