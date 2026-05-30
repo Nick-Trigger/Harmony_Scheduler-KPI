@@ -1,0 +1,1 @@
+from app.objectives import min_tardiness
