@@ -298,11 +298,11 @@ With the backend running:
 | `POST` | `/schedule` | Solve a scheduling problem and return assignments + KPIs |
 | `GET`  | `/health`   | Liveness probe - returns `{"status": "ok"}`              |
 
-### `POST /schedule`
+#### `POST /schedule`
 
 The request body schema is defined in the backend adapter that owns the wire format. For Client A, see [`backend/app/adapters/ReadMe_client_a.md`](backend/app/adapters/ReadMe_client_a.md) for the full field-by-field reference.
 
-#### Response - 200 (feasible)
+##### Response - 200 (feasible)
 
 ```json
 {
@@ -349,7 +349,7 @@ KPI fields:
 - `makespan_minutes`: latest assignment end minus earliest assignment start
 - `utilization_pct[resource_id]`: processing minutes / horizon-clipped calendar minutes × 100 rounded. Changeover minutes are excluded from the numerator.
 
-#### Response - 422 (infeasible)
+##### Response - 422 (infeasible)
 
 Returned when the problem cannot be solved within the constraints. Distinguished from validation errors (which use the same status code) by the response shape.
 
@@ -371,7 +371,7 @@ The `why` field contains at least one concrete, actionable reason. Common causes
 - A product's deadline is earlier than its minimum possible completion time
 - Solver reports no feasible solution exists (structural checks all passed)
 
-#### Response - 400 (bad request)
+##### Response - 400 (bad request)
 
 Returned for unknown `objective_mode` and other client-side input errors:
 
@@ -384,7 +384,7 @@ Returned for unknown `objective_mode` and other client-side input errors:
 
 Pydantic-level shape errors (missing required fields, wrong types) come through FastAPI's default 422 `HTTPValidationError` with a `detail` array pinpointing the offending field path.
 
-### `GET /health`
+#### `GET /health`
 
 Simple liveness probe:
 
