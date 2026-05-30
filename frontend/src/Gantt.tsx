@@ -21,13 +21,17 @@ export function Gantt({ assignments }: GanttProps) {
         return <div className="text-sm opacity-70">No assignments to display.</div>;
     }
 
-    // Compute time scale 
+    // Compute time scale at 15-minute intervals
     const times = assignments.flatMap((a) => [
         new Date(a.start).getTime(),
         new Date(a.end).getTime(),
     ]);
-    const minTime = Math.min(...times);
-    const maxTime = Math.max(...times);
+    const TICK_MS = 15 * 60 * 1000;
+    const rawMin = Math.min(...times);
+    const rawMax = Math.max(...times);
+    // Floor min down, ceil max up — guarantees no bar gets clipped.
+    const minTime = Math.floor(rawMin / TICK_MS) * TICK_MS;
+    const maxTime = Math.ceil(rawMax / TICK_MS) * TICK_MS;
 
     // Layout constants
     const ROW_HEIGHT = 50;
@@ -64,13 +68,16 @@ export function Gantt({ assignments }: GanttProps) {
 
     const svgHeight = TOP_PADDING + resources.length * (ROW_HEIGHT + ROW_GAP) + 10;
 
-    // Time axis ticks (every hour)
-    const ticks: { x: number; label: string }[] = [];
-    const startMs = Math.ceil(minTime / 3600000) * 3600000;
-    for (let t = startMs; t <= maxTime; t += 3600000) {
+    // Time axis ticks (every 15 minutes)
+    const ticks: { x: number; isHour: boolean; label: string }[] = [];
+    for (let t = minTime; t <= maxTime; t += TICK_MS) {
         const d = new Date(t);
+        const fraction = (t - minTime) / (maxTime - minTime);
+        const x = chartX + fraction * chartW;
+        const isHour = d.getMinutes() === 0;
         ticks.push({
-            x: toX(d.toISOString().slice(0, 19)),
+            x,
+            isHour,
             label: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
         });
     }
@@ -88,14 +95,14 @@ export function Gantt({ assignments }: GanttProps) {
                             y1={TOP_PADDING - 10}
                             x2={tick.x}
                             y2={svgHeight - 10}
-                            stroke="#e5e5e5"
-                            strokeDasharray="2,2"
+                            stroke={tick.isHour ? "#222" : "#222"}
+                            strokeWidth={tick.isHour ? 1 : 1}
                         />
                         <text
                             x={tick.x}
                             y={TOP_PADDING - 16}
-                            fontSize="11"
-                            fill="#666"
+                            fontSize={tick.isHour ? 11 : 10}
+                            fill={tick.isHour ? "#222" : "#222"}
                             textAnchor="middle"
                         >
                             {tick.label}
@@ -126,7 +133,7 @@ export function Gantt({ assignments }: GanttProps) {
                                 y={y}
                                 width={chartW}
                                 height={ROW_HEIGHT}
-                                fill="#fff"
+                                fill="transparent"
                                 stroke="#e5e5e5"
                             />
 
