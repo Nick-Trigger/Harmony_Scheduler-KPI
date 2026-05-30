@@ -1,51 +1,62 @@
 import type { Assignment } from "./api";
+import { ColorRampCollection } from "@maptiler/sdk"
 
 interface GanttProps {
     assignments: Assignment[];
 }
-
-// Stable color palette — indexed by product order of appearance.
-const COLORS = [
-    "#3b82f6", // blue
-    "#ef4444", // red
-    "#10b981", // green
-    "#f59e0b", // amber
-    "#8b5cf6", // violet
-    "#ec4899", // pink
-    "#14b8a6", // teal
-    "#f97316", // orange
-];
 
 export function Gantt({ assignments }: GanttProps) {
     if (assignments.length === 0) {
         return <div className="text-sm opacity-70">No assignments to display.</div>;
     }
 
+    // --- Layout constants ---
+    const ROW_HEIGHT = 50;
+    const ROW_GAP = 6;
+    const LABEL_WIDTH = 110;
+    const PADDING = 20;
+    const TOP_PADDING = 40;
+    const MIN_BAR_WIDTH = 80;       // narrowest width of a time block
+    const MIN_CHART_WIDTH = 700;    // never shrink the chart below this
+    const TICK_MS = 15 * 60 * 1000;
+
+
     // Compute time scale at 15-minute intervals
     const times = assignments.flatMap((a) => [
         new Date(a.start).getTime(),
         new Date(a.end).getTime(),
     ]);
-    const TICK_MS = 15 * 60 * 1000;
     const rawMin = Math.min(...times);
     const rawMax = Math.max(...times);
-    // Floor min down, ceil max up — guarantees no bar gets clipped.
     const minTime = Math.floor(rawMin / TICK_MS) * TICK_MS;
     const maxTime = Math.ceil(rawMax / TICK_MS) * TICK_MS;
 
-    // Layout constants
-    const ROW_HEIGHT = 50;
-    const ROW_GAP = 6;
-    const LABEL_WIDTH = 110;
-    const CHART_WIDTH = 900;
-    const PADDING = 20;
-    const TOP_PADDING = 40;
+
+    // Compute chart width based on shortest assignment duration
+    const shortestMin = Math.min(
+        ...assignments.map(
+            (a) => (new Date(a.end).getTime() - new Date(a.start).getTime()) / 60000,
+        ),
+    );
+    const totalMin = (maxTime - minTime) / 60000;
+
+    const pxPerMin = MIN_BAR_WIDTH / shortestMin;
+    const requiredChartW = pxPerMin * totalMin;
+    const chartW = Math.max(
+        MIN_CHART_WIDTH - LABEL_WIDTH - 2 * PADDING,
+        requiredChartW,
+    );
+    const CHART_WIDTH = LABEL_WIDTH + 2 * PADDING + chartW;
+    const chartX = LABEL_WIDTH + PADDING;
 
     // Map products to colors
     const products = Array.from(new Set(assignments.map((a) => a.product)));
     products.sort();
+
+    const colorMap = ColorRampCollection.RAINBOW_SOFT.scale(0, products.length);
+
     const colorOf = (product: string) =>
-        COLORS[products.indexOf(product) % COLORS.length];
+        colorMap.getColorHex(products.indexOf(product));
 
     // Group assignments by resource
     const resources = Array.from(new Set(assignments.map((a) => a.resource)));
@@ -58,63 +69,45 @@ export function Gantt({ assignments }: GanttProps) {
     }
 
     // Time scaling 
-    const chartX = LABEL_WIDTH + PADDING;
-    const chartW = CHART_WIDTH - LABEL_WIDTH - 2 * PADDING;
+    const xFromMs = (ms: number) => {
+        const fraction = (ms - minTime) / (maxTime - minTime);
+        return chartX + fraction * chartW;
+    };
+
+    const xFromIso = (iso: string) => xFromMs(new Date(iso).getTime());
+
     const toX = (iso: string) => {
         const t = new Date(iso).getTime();
         const fraction = (t - minTime) / (maxTime - minTime);
         return chartX + fraction * chartW;
     };
 
-    const svgHeight = TOP_PADDING + resources.length * (ROW_HEIGHT + ROW_GAP) + 10;
-
     // Time axis ticks (every 15 minutes)
-    const ticks: { x: number; isHour: boolean; label: string }[] = [];
+    const ticks: { x: number; isHour: boolean; label: string; key: string }[] = [];
     for (let t = minTime; t <= maxTime; t += TICK_MS) {
         const d = new Date(t);
-        const fraction = (t - minTime) / (maxTime - minTime);
-        const x = chartX + fraction * chartW;
         const isHour = d.getMinutes() === 0;
+        const label = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
         ticks.push({
-            x,
+            x: xFromMs(t),
             isHour,
-            label: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
+            label,
+            key: String(t),
         });
     }
+
+    const svgHeight = TOP_PADDING + resources.length * (ROW_HEIGHT + ROW_GAP) + 10;
 
     const fmtTime = (iso: string) => iso.slice(11, 16);
 
     return (
         <div className="overflow-x-auto">
             <svg width={CHART_WIDTH} height={svgHeight} style={{ background: "#fafafa" }}>
-                {/* Time axis */}
-                {ticks.map((tick, i) => (
-                    <g key={i}>
-                        <line
-                            x1={tick.x}
-                            y1={TOP_PADDING - 10}
-                            x2={tick.x}
-                            y2={svgHeight - 10}
-                            stroke={tick.isHour ? "#222" : "#222"}
-                            strokeWidth={tick.isHour ? 1 : 1}
-                        />
-                        <text
-                            x={tick.x}
-                            y={TOP_PADDING - 16}
-                            fontSize={tick.isHour ? 11 : 10}
-                            fill={tick.isHour ? "#222" : "#222"}
-                            textAnchor="middle"
-                        >
-                            {tick.label}
-                        </text>
-                    </g>
-                ))}
-
                 {/* Resource rows */}
                 {resources.map((resource, i) => {
                     const y = TOP_PADDING + i * (ROW_HEIGHT + ROW_GAP);
                     return (
-                        <g key={resource}>
+                        <g key={`row-${resource}`}>
                             {/* Resource label */}
                             <text
                                 x={LABEL_WIDTH + PADDING - 6}
@@ -136,14 +129,45 @@ export function Gantt({ assignments }: GanttProps) {
                                 fill="transparent"
                                 stroke="#e5e5e5"
                             />
+                        </g>
+                    );
+                })}
 
-                            {/* Assignment bars on this row */}
-                            {byResource[resource].map((a, j) => {
+                {/* Time axis */}
+                {ticks.map((tick) => (
+                    <g key={`tick-${tick.key}`}>
+                        <line
+                            x1={tick.x}
+                            y1={TOP_PADDING - 10}
+                            x2={tick.x}
+                            y2={svgHeight - 10}
+                            stroke={tick.isHour ? "#222" : "#222"}
+                            strokeWidth={tick.isHour ? 1 : 1}
+                        />
+                        <text
+                            x={tick.x}
+                            y={TOP_PADDING - 16}
+                            fontSize={tick.isHour ? 11 : 10}
+                            fill={tick.isHour ? "#222" : "#222"}
+                            textAnchor="middle"
+                        >
+                            {tick.label}
+                        </text>
+                    </g>
+                ))}
+
+                {/* Assignment bars (drawn last so they sit on top of gridlines) */}
+                {resources.map((resource, i) => {
+                    const y = TOP_PADDING + i * (ROW_HEIGHT + ROW_GAP);
+                    return (
+                        <g key={`bars-${resource}`}>
+                            {byResource[resource].map((a) => {
                                 const bx = toX(a.start);
                                 const bx2 = toX(a.end);
                                 const bw = Math.max(2, bx2 - bx);
+                                const barKey = `${a.product}-${a.step_index}-${a.resource}`;
                                 return (
-                                    <g key={j}>
+                                    <g key={barKey}>
                                         <rect
                                             x={bx}
                                             y={y + 4}
@@ -178,7 +202,7 @@ export function Gantt({ assignments }: GanttProps) {
                                                     fillOpacity="0.85"
                                                     textAnchor="middle"
                                                 >
-                                                    {fmtTime(a.start)}–{fmtTime(a.end)}
+                                                    {fmtTime(a.start)}-{fmtTime(a.end)}
                                                 </text>
                                             </>
                                         )}
@@ -189,19 +213,6 @@ export function Gantt({ assignments }: GanttProps) {
                     );
                 })}
             </svg>
-
-            {/* Legend */}
-            <div className="mt-4 flex gap-4 flex-wrap">
-                {products.map((p) => (
-                    <div key={p} className="flex items-center gap-2">
-                        <span
-                            className="inline-block w-4 h-4 rounded"
-                            style={{ background: colorOf(p) }}
-                        />
-                        <span className="text-sm">{p}</span>
-                    </div>
-                ))}
-            </div>
         </div>
     );
 }
