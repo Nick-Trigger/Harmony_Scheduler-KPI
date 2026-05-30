@@ -19,6 +19,8 @@ export function Gantt({ assignments }: GanttProps) {
     const MIN_BAR_WIDTH = 80;       // narrowest width of a time block
     const MIN_CHART_WIDTH = 700;    // never shrink the chart below this
     const TICK_MS = 15 * 60 * 1000;
+    const ASSIGNMENT_FILL_OPACITY = 0.25;
+    const ASSIGNMENT_STROKE_WIDTH = 1.5;
 
 
     // Compute time scale at 15-minute intervals
@@ -53,7 +55,7 @@ export function Gantt({ assignments }: GanttProps) {
     const products = Array.from(new Set(assignments.map((a) => a.product)));
     products.sort();
 
-    const colorMap = ColorRampCollection.RAINBOW_SOFT.scale(0, products.length);
+    const colorMap = ColorRampCollection.PORTLAND.scale(0, products.length);
 
     const colorOf = (product: string) =>
         colorMap.getColorHex(products.indexOf(product));
@@ -114,7 +116,7 @@ export function Gantt({ assignments }: GanttProps) {
                                 y={y + ROW_HEIGHT / 2 + 4}
                                 fontSize="14"
                                 fontWeight="600"
-                                fill="#222"
+                                fill="black"
                                 textAnchor="end"
                             >
                                 {resource}
@@ -126,8 +128,8 @@ export function Gantt({ assignments }: GanttProps) {
                                 y={y}
                                 width={chartW}
                                 height={ROW_HEIGHT}
-                                fill="transparent"
-                                stroke="#e5e5e5"
+                                fill="white"
+                                stroke="lightgrey"
                             />
                         </g>
                     );
@@ -141,14 +143,14 @@ export function Gantt({ assignments }: GanttProps) {
                             y1={TOP_PADDING - 10}
                             x2={tick.x}
                             y2={svgHeight - 10}
-                            stroke={tick.isHour ? "#222" : "#222"}
+                            stroke={tick.isHour ? "black" : "darkgrey"}
                             strokeWidth={tick.isHour ? 1 : 1}
                         />
                         <text
                             x={tick.x}
                             y={TOP_PADDING - 16}
-                            fontSize={tick.isHour ? 11 : 10}
-                            fill={tick.isHour ? "#222" : "#222"}
+                            fontSize={tick.isHour ? 13 : 10}
+                            fill={tick.isHour ? "black" : "darkgrey"}
                             textAnchor="middle"
                         >
                             {tick.label}
@@ -173,32 +175,43 @@ export function Gantt({ assignments }: GanttProps) {
                                             y={y + 4}
                                             width={bw}
                                             height={ROW_HEIGHT - 8}
-                                            fill={colorOf(a.product)}
+                                            fill="#fff"
                                             rx={3}
-                                        >
-                                            <title>
-                                                {a.product} step {a.step_index} ({a.capability})
-                                                {"\n"}
-                                                {fmtTime(a.start)} → {fmtTime(a.end)}
-                                            </title>
-                                        </rect>
+                                        />
+                                        {/* Colored overlay — translucent, sits on the white below */}
+                                        <rect
+                                            x={bx}
+                                            y={y + 4}
+                                            width={bw}
+                                            height={ROW_HEIGHT - 8}
+                                            fill={colorOf(a.product)}
+                                            fillOpacity={ASSIGNMENT_FILL_OPACITY}
+                                            stroke={colorOf(a.product)}
+                                            strokeWidth={ASSIGNMENT_STROKE_WIDTH}
+                                            rx={3}
+                                        />
+                                        <title>
+                                            {a.product} step {a.step_index} ({a.capability})
+                                            {"\n"}
+                                            {fmtTime(a.start)} → {fmtTime(a.end)}
+                                        </title>
                                         {bw > 60 && (
                                             <>
                                                 <text
                                                     x={bx + bw / 2}
                                                     y={y + ROW_HEIGHT / 2 - 2}
                                                     fontSize="12"
-                                                    fill="white"
+                                                    fill="black"
                                                     fontWeight="600"
                                                     textAnchor="middle"
                                                 >
-                                                    {a.product}
+                                                    {a.product}, #{a.step_index}
                                                 </text>
                                                 <text
                                                     x={bx + bw / 2}
                                                     y={y + ROW_HEIGHT / 2 + 12}
                                                     fontSize="10"
-                                                    fill="white"
+                                                    fill="black"
                                                     fillOpacity="0.85"
                                                     textAnchor="middle"
                                                 >
