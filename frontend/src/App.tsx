@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Gantt } from "./Gantt";
 import { postSchedule, type ScheduleResponse, type InfeasibleResponse } from "./api";
-import { exampleData } from "./exampleData";
+import { DataButton } from "./DataButton";
 
 export default function App() {
   const [result, setResult] = useState<ScheduleResponse | null>(null);
@@ -28,72 +28,26 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-base-200">
-      {/* Top bar with settings dropdown */}
+      {/* Top bar */}
       <div className="navbar bg-base-100 shadow-sm">
         <div className="navbar-start">
-          <div className="dropdown">
-            <div tabIndex={0} role="button" className="btn btn-ghost btn-square">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                className="w-5 h-5"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </div>
-            <ul
-              tabIndex={0}
-              className="menu menu-sm dropdown-content bg-base-100 rounded-box z-10 mt-3 w-52 p-2 shadow"
-            >
-              <li>
-                <a>Settings (placeholder)</a>
-              </li>
-              <li>
-                <a>Theme</a>
-              </li>
-              <li>
-                <a>About</a>
-              </li>
-            </ul>
-          </div>
-          <span className="ml-2 font-semibold">Harmony Scheduler</span>
+          <span className="ml-2 font-semibold">Harmony Factory Scheduler</span>
         </div>
       </div>
 
       {/* Main content */}
       <div className="p-6 max-w-5xl mx-auto">
+        {/* Data input buttons */}
         <div className="mb-6">
-          <button
-            className="btn btn-primary mr-4"
-            onClick={() => handleSchedule(exampleData)}
-            disabled={loading}
-          >
-            {loading ? "Solving..." : "Schedule example"}
-          </button>
-          <button
-            className="btn btn-primary mr-4"
-            onClick={() => {
-              const text = prompt("Paste your custom data here (JSON format):");
-              if (!text) return;
-              try {
-                const payload = JSON.parse(text);
-                handleSchedule(payload);
-              } catch (err) {
-                alert(`Invalid JSON: ${err instanceof Error ? err.message : "parse failed"}`);
-              }
-            }}
-            disabled={loading}
-          >
-            {loading ? "Solving..." : "Schedule custom"}
-          </button>
-
+          <DataButton function="example" dataHandler={handleSchedule} loading={loading}>
+            Load Example Data
+          </DataButton>
+          <DataButton function="paste" dataHandler={handleSchedule} loading={loading}>
+            Paste JSON Data
+          </DataButton>
+          <DataButton function="upload" dataHandler={handleSchedule} loading={loading}>
+            Upload JSON File
+          </DataButton>
         </div>
 
         {/* Error display */}

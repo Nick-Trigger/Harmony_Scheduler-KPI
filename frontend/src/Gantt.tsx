@@ -76,8 +76,6 @@ export function Gantt({ assignments }: GanttProps) {
         return chartX + fraction * chartW;
     };
 
-    const xFromIso = (iso: string) => xFromMs(new Date(iso).getTime());
-
     const toX = (iso: string) => {
         const t = new Date(iso).getTime();
         const fraction = (t - minTime) / (maxTime - minTime);
@@ -194,7 +192,7 @@ export function Gantt({ assignments }: GanttProps) {
                                             <title>
                                                 {a.product} step {a.step_index} ({a.capability})
                                                 {"\n"}
-                                                {fmtTime(a.start)} → {fmtTime(a.end)}
+                                                {fmtTime(a.start)} - {fmtTime(a.end)}
                                             </title>
                                             {bw > 60 && (
                                                 <>
@@ -216,7 +214,7 @@ export function Gantt({ assignments }: GanttProps) {
                                                         fillOpacity="0.85"
                                                         textAnchor="middle"
                                                     >
-                                                        {fmtTime(a.start)}-{fmtTime(a.end)}
+                                                        {fmtTime(a.start)} - {fmtTime(a.end)}
                                                     </text>
                                                 </>
                                             )}
