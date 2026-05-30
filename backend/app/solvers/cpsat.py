@@ -73,7 +73,7 @@ def solve(problem: SchedulingProblem) -> Solution:
         reasons = diagnose_infeasibility(problem)
         if len(reasons) == 0:
             raise InfeasibleError(["solver reports the model is infeasible but no specific reasons were found"])
-        raise InfeasibleError(["solver reports the model is infeasible. Reasons:"] + reasons)
+        raise InfeasibleError(reasons)
     if status == cp_model.MODEL_INVALID:
         raise InvariantError("solver reports the model is invalid")
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):

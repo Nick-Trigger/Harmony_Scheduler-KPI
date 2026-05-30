@@ -16,12 +16,6 @@ class Assignment:
 
 @dataclass(frozen=True)
 class Solution:
-    """Complete Schedule, Assignments only
-
-    KPIs are computed separately in kpis.py from this solution.
-    This is done so that the KPI logic can be tested independent
-    of this solver, and so that the Solution can be re-scored
-    using different objectives later.
-    """
+    "Complete Schedule"
 
     assignments: tuple[Assignment, ...]
