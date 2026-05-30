@@ -1,10 +1,11 @@
+import type { ReactNode } from "react";
 import { exampleData } from "./exampleData";
 
 interface DataButtonProps {
     function: string;
     disabled?: boolean;
     dataHandler?: (data: any) => void;
-    children?: React.ReactNode;
+    children?: ReactNode;
     loading?: boolean;
 }
 
