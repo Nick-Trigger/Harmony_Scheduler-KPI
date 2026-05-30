@@ -35,7 +35,7 @@ class _ResourceIn(BaseModel):
 
 class _OperationIn(BaseModel):
     capability: str
-    duration_minutes: int
+    duration_minutes: int = Field(gt=0)
 
 
 class _ProductIn(BaseModel):
