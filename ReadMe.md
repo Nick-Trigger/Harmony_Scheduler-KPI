@@ -6,16 +6,12 @@ Built for the Harmony take-home; structured for extensibility (new client input/
 
 [![CI](https://github.com/Nick-Trigger/Harmony_Scheduler-KPI/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Nick-Trigger/Harmony_Scheduler-KPI/actions/workflows/ci.yml)
 
----
-
 ## Tech stack
 
 - **Backend**: Python 3.12, FastAPI, OR-Tools CP-SAT, managed with [uv](https://github.com/astral-sh/uv)
 - **Frontend**: React 19 + TypeScript with the [React Compiler](https://react.dev/learn/react-compiler), built with Vite. TailwindCSS v4 + daisyUI v5 for styling.
 - **Visualization**: hand-rolled inline SVG Gantt with per-product color coding via MapTiler's `ColorRampCollection`
 - **CI**: GitHub Actions runs the test suite on push and PR
-
----
 
 ## Prerequisites
 
@@ -78,8 +74,6 @@ If PowerShell scripts won't run, enable them once per user:
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 ```
 
----
-
 ## Running the service
 
 ### First-time setup
@@ -123,73 +117,6 @@ The frontend UI will be available at [http://localhost:5173].
 
 > Note: You do not need to run the frontend to use the backend. The API is usable independently (for example via curl or Postman. See [Using the API](#using-the-api)).
 
----
-
-## Using the API
-
-`POST /schedule` accepts a scheduling problem and returns either:
-
-- **200** - a feasible schedule with KPIs, or
-- **422** - a structured infeasibility response with concrete reasons, or
-- **400** - a bad request (e.g., unknown `objective_mode`)
-
-### Example via the frontend
-
-Open [http://localhost:5173] and click **Schedule example** to run the spec's
-example input. Use the **Upload JSON** button to send a custom payload.
-
-Three sample inputs live under [`backend/tests/example_data/`](/backend/tests/example_data/):
-
-- `example_a.json`: the spec's reference example
-- `complex_a.json`: a larger 15-product fixture across 4 families
-- `force_tardy.json`: a stress case that genuinely cannot finish on time
-
-### Example via curl
-
-**macOS / Linux:**
-
-```bash
-curl -X POST http://localhost:8000/schedule \
-  -H "Content-Type: application/json" \
-  -d @backend/tests/example_data/example_a.json
-```
-
-**Windows (PowerShell):**
-
-```powershell
-curl.exe -X POST http://localhost:8000/schedule `
-  -H "Content-Type: application/json" `
-  -d "@backend/tests/example_data/example_a.json"
-```
-
-> Note: Windows PowerShell aliases `curl` to `Invoke-WebRequest`, which has different syntax. Use `curl.exe` to invoke the real curl binary (shipped with Windows 10+).
-
-Pipe the response through a JSON formatter to make it readable:
-
-**macOS / Linux** (with `jq`):
-
-```bash
-curl -s -X POST http://localhost:8000/schedule \
-  -H "Content-Type: application/json" \
-  -d @backend/tests/example_data/example_a.json | jq
-```
-
-**Windows (PowerShell)** (built-in formatting):
-
-```powershell
-curl.exe -s -X POST http://localhost:8000/schedule `
-  -H "Content-Type: application/json" `
-  -d "@backend/tests/example_data/example_a.json" | ConvertFrom-Json | ConvertTo-Json -Depth 10
-```
-
-### Example via interactive docs
-
-FastAPI auto-generates Swagger UI at <http://localhost:8000/docs>. Paste any input and execute it from the browser.
-
-> Note: This auto-generated API reference will show Input/Output response shapes currently loaded by the backend. See [Design Notes](#design-notes) for information.
-
----
-
 ## Running the tests
 
 From `backend/`:
@@ -206,8 +133,6 @@ The test suite includes the three tests required by the spec:
 
 Tests run automatically on every push and pull request via GitHub Actions
 (`.github/workflows/ci.yml`). [![CI](https://github.com/Nick-Trigger/Harmony_Scheduler-KPI/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Nick-Trigger/Harmony_Scheduler-KPI/actions/workflows/ci.yml)
-
----
 
 ## Architecture
 
@@ -257,8 +182,6 @@ When `POST /schedule` is called, the request passes through these steps in order
 6. **Format**: `adapters/{client}.py::format_response` translates the canonical `Solution` + KPIs back into Client's response shape and FastAPI returns it as the 200 body.
 
 The solver, KPI calculator, and validator operate **only** on canonical domain types. Client-specific field names and shapes are confined to `adapters/`.
-
----
 
 ## Design notes
 
@@ -358,8 +281,6 @@ HTTP status codes and error response bodies are mapped centrally in `api/errors.
 - **Pre-solve diagnostics are a lower bound.** Some infeasibility only emerges from solver-discovered interactions - these surface as a generic "constraints are mutually unsatisfiable" message rather than a specific reason. The alternative (CP-SAT's `sufficient_assumptions_for_infeasibility`) would require restructuring the model and was deferred.
 - **Output sorted for determinism.** Assignments are sorted by `(start, product, step)` so repeated runs produce byte-identical output, satisfying the spec's determinism acceptance check.
 
----
-
 ## API documentation
 
 With the backend running:
@@ -373,7 +294,7 @@ With the backend running:
 ### Endpoints
 
 | Method | Path        | Description                                              |
-|--------|-------------|----------------------------------------------------------|
+|--|-|-|
 | `POST` | `/schedule` | Solve a scheduling problem and return assignments + KPIs |
 | `GET`  | `/health`   | Liveness probe - returns `{"status": "ok"}`              |
 
@@ -472,3 +393,66 @@ Simple liveness probe:
 ```
 
 Useful for monitoring and container orchestration health checks.
+
+### Using the API
+
+`POST /schedule` accepts a scheduling problem and returns either:
+
+- **200** - a feasible schedule with KPIs, or
+- **422** - a structured infeasibility response with concrete reasons, or
+- **400** - a bad request (e.g., unknown `objective_mode`)
+
+#### Example via the frontend
+
+Open [http://localhost:5173] and click **Schedule example** to run the spec's
+example input. Use the **Upload JSON** button to send a custom payload.
+
+Three sample inputs live under [`backend/tests/example_data/`](/backend/tests/example_data/):
+
+- `example_a.json`: the spec's reference example
+- `complex_a.json`: a larger 15-product fixture across 4 families
+- `force_tardy.json`: a stress case that genuinely cannot finish on time
+
+#### Example via curl
+
+**macOS / Linux:**
+
+```bash
+curl -X POST http://localhost:8000/schedule \
+  -H "Content-Type: application/json" \
+  -d @backend/tests/example_data/example_a.json
+```
+
+**Windows (PowerShell):**
+
+```powershell
+curl.exe -X POST http://localhost:8000/schedule `
+  -H "Content-Type: application/json" `
+  -d "@backend/tests/example_data/example_a.json"
+```
+
+> Note: Windows PowerShell aliases `curl` to `Invoke-WebRequest`, which has different syntax. Use `curl.exe` to invoke the real curl binary (shipped with Windows 10+).
+
+Pipe the response through a JSON formatter to make it readable:
+
+**macOS / Linux** (with `jq`):
+
+```bash
+curl -s -X POST http://localhost:8000/schedule \
+  -H "Content-Type: application/json" \
+  -d @backend/tests/example_data/example_a.json | jq
+```
+
+**Windows (PowerShell)** (built-in formatting):
+
+```powershell
+curl.exe -s -X POST http://localhost:8000/schedule `
+  -H "Content-Type: application/json" `
+  -d "@backend/tests/example_data/example_a.json" | ConvertFrom-Json | ConvertTo-Json -Depth 10
+```
+
+#### Example via interactive docs
+
+FastAPI auto-generates Swagger UI at <http://localhost:8000/docs>. Paste any input and execute it from the browser.
+
+> Note: This auto-generated API reference will show Input/Output response shapes currently loaded by the backend. See [Design Notes](#design-notes) for information.

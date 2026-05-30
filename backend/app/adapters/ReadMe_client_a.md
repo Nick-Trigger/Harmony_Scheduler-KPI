@@ -8,8 +8,6 @@ from the Pydantic models in `client_a.py`, the Pydantic models win.
 For the response format and full endpoint behavior, see the project root
 [ReadMe.md](../../../ReadMe.md#api-documentation) **API documentation** section.
 
----
-
 ## Top-level shape
 
 ```json
@@ -23,8 +21,6 @@ For the response format and full endpoint behavior, see the project root
 ```
 
 All five top-level fields are required.
-
----
 
 ## `horizon`
 
@@ -41,13 +37,11 @@ and end at or before `end`.
 ```
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+|-||-|-|
 | `start` | datetime | yes | Earliest moment any operation may begin |
 | `end` | datetime | yes | Latest moment any operation may end |
 
 Datetimes are ISO 8601 local time strings (no timezone suffix).
-
----
 
 ## `resources`
 
@@ -70,7 +64,7 @@ of capabilities and a calendar describing when it's available.
 ```
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+|-||-|-|
 | `id` | string | yes | Unique identifier - referenced in response assignments |
 | `capabilities` | string[] | yes | What this resource can do (e.g. `["fill"]` or `["label", "inspect"]`) |
 | `calendar` | `[start, end][]` | yes | Working windows during which the resource is available |
@@ -82,8 +76,6 @@ must match the `capability` values used in product routes.
 window. Windows may have gaps between them (lunch breaks, maintenance, shift
 changes). An operation must fit entirely inside one window - it cannot span
 a gap.
-
----
 
 ## `products`
 
@@ -108,7 +100,7 @@ operations, each requiring a specific capability.
 ```
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+|-||-|-|
 | `id` | string | yes | Unique identifier - referenced in response assignments |
 | `family` | string | yes | Family label used for changeover lookups |
 | `due` | datetime | yes | Target completion time for the last step |
@@ -117,15 +109,13 @@ operations, each requiring a specific capability.
 ### `route[]`
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+|-||-|-|
 | `capability` | string | yes | Which capability is required for this step |
 | `duration_minutes` | integer > 0 | yes | How long the step takes |
 
 Route order is mandatory - step 2 cannot start until step 1 ends. Operations
 are non-preemptive (once started, they run to completion) and indivisible
 (cannot be split across working windows).
-
----
 
 ## `changeover_matrix_minutes`
 
@@ -146,7 +136,7 @@ to different families. Setup time is inserted **before** the later operation.
 ```
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+|-||-|-|
 | `values` | object | yes | Map of `"from_family->to_family"` strings to integer minutes |
 
 Keys are strings of the form `"<from>-><to>"` (literal `->` separator).
@@ -157,8 +147,6 @@ non-zero if your process requires a setup even between same-family products.
 
 **Missing entries** default to `0`. If you want a non-zero setup, you must
 include the entry explicitly.
-
----
 
 ## `settings`
 
@@ -174,15 +162,13 @@ Solver configuration.
 ```
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+|-||-|-|
 | `time_limit_seconds` | integer | yes | Wall-clock budget for the solver |
 | `objective_mode` | string | yes | Which objective to optimize. Currently only `"min_tardiness"` is registered |
 
 Unknown `objective_mode` values produce a 400 response with the list of
 registered alternatives. To add a new objective, see the **Design notes**
 section in the root [`ReadMe.md`](../../../ReadMe.md).
-
----
 
 ## Full minimal example
 
