@@ -147,10 +147,10 @@ def format_response(solution: Solution, kpis: dict[str, Any]) -> dict[str, Any]:
     return {
         "assignments": [
             {
-                "product_id": a.product_id,
+                "product": a.product_id,
                 "step_index": a.step_index,
                 "capability": a.capability,
-                "resource_id": a.resource_id,
+                "resource": a.resource_id,
                 "start": a.start.isoformat(),
                 "end": a.end.isoformat(),
             }

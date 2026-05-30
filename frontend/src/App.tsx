@@ -1,122 +1,117 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from "react";
+import { Gantt } from "./Gantt";
+import { postSchedule, type ScheduleResponse, type InfeasibleResponse } from "./api";
+import { DataButton } from "./DataButton";
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [result, setResult] = useState<ScheduleResponse | null>(null);
+  const [error, setError] = useState<InfeasibleResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSchedule(data: any) {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    if (!data || Object.keys(data).length === 0) {
+      setError({ error: "No data provided", why: ["Please provide valid schedule data."] });
+      setLoading(false);
+      return;
+    }
+    const response = await postSchedule(data);
+    setLoading(false);
+    if (response.ok) {
+      setResult(response.data);
+    } else {
+      setError(response.error);
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="min-h-screen bg-base-200">
+      {/* Top bar */}
+      <div className="navbar bg-base-100 shadow-sm">
+        <div className="navbar-start">
+          <span className="ml-2 font-semibold">Harmony Factory Scheduler</span>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      </div>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      {/* Main content */}
+      <div className="p-6 max-w-5xl mx-auto">
+        {/* Data input buttons */}
+        <div className="mb-6">
+          <DataButton function="example" dataHandler={handleSchedule} loading={loading}>
+            Load Example Data
+          </DataButton>
+          <DataButton function="paste" dataHandler={handleSchedule} loading={loading}>
+            Paste JSON Data
+          </DataButton>
+          <DataButton function="upload" dataHandler={handleSchedule} loading={loading}>
+            Upload JSON File
+          </DataButton>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {/* Error display */}
+        {error && (
+          <div className="alert alert-error mb-6">
+            <div>
+              <div className="font-semibold">{error.error}</div>
+              <ul className="text-sm mt-1 list-disc list-inside">
+                {error.why.map((reason, i) => (
+                  <li key={i}>{reason}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Schedule display */}
+        {result && (
+          <div className="space-y-6">
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body">
+                <h2 className="card-title">Schedule</h2>
+                <Gantt assignments={result.assignments} />
+              </div>
+            </div>
+
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body">
+                <h2 className="card-title">KPIs</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <div className="text-xs opacity-70">Tardiness</div>
+                    <div className="text-xl font-semibold">
+                      {result.kpis.tardiness_minutes} min
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs opacity-70">Changeovers</div>
+                    <div className="text-xl font-semibold">
+                      {result.kpis.changeover_count} ({result.kpis.changeover_minutes} min)
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs opacity-70">Makespan</div>
+                    <div className="text-xl font-semibold">
+                      {result.kpis.makespan_minutes} min
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <div className="text-xs opacity-70 mb-2">Utilization</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {Object.entries(result.kpis.utilization_pct).map(([r, pct]) => (
+                      <div key={r} className="text-sm">
+                        <span className="font-mono">{r}:</span> {pct}%
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
-
-export default App

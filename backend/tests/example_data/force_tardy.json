@@ -1,0 +1,248 @@
+{
+    "horizon": {
+        "start": "2025-11-03T08:00:00",
+        "end": "2025-11-03T20:00:00"
+    },
+    "resources": [
+        {
+            "id": "Fill-1",
+            "capabilities": [
+                "fill"
+            ],
+            "calendar": [
+                [
+                    "2025-11-03T08:00:00",
+                    "2025-11-03T20:00:00"
+                ]
+            ]
+        },
+        {
+            "id": "Label-1",
+            "capabilities": [
+                "label"
+            ],
+            "calendar": [
+                [
+                    "2025-11-03T08:00:00",
+                    "2025-11-03T20:00:00"
+                ]
+            ]
+        },
+        {
+            "id": "Pack-1",
+            "capabilities": [
+                "pack"
+            ],
+            "calendar": [
+                [
+                    "2025-11-03T08:00:00",
+                    "2025-11-03T20:00:00"
+                ]
+            ]
+        }
+    ],
+    "changeover_matrix_minutes": {
+        "values": {
+            "standard->standard": 0,
+            "standard->premium": 30,
+            "premium->standard": 30,
+            "premium->premium": 0
+        }
+    },
+    "products": [
+        {
+            "id": "P-300",
+            "family": "standard",
+            "due": "2025-11-03T09:30:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-301",
+            "family": "premium",
+            "due": "2025-11-03T10:00:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 35
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 25
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-302",
+            "family": "standard",
+            "due": "2025-11-03T10:30:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-303",
+            "family": "premium",
+            "due": "2025-11-03T11:00:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 40
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 20
+                }
+            ]
+        },
+        {
+            "id": "P-304",
+            "family": "standard",
+            "due": "2025-11-03T11:00:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-305",
+            "family": "premium",
+            "due": "2025-11-03T11:30:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 35
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 25
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-306",
+            "family": "standard",
+            "due": "2025-11-03T12:00:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-307",
+            "family": "premium",
+            "due": "2025-11-03T12:00:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 40
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 20
+                }
+            ]
+        },
+        {
+            "id": "P-308",
+            "family": "standard",
+            "due": "2025-11-03T12:30:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-309",
+            "family": "premium",
+            "due": "2025-11-03T13:00:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 35
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 25
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        }
+    ],
+    "settings": {
+        "time_limit_seconds": 60,
+        "objective_mode": "min_tardiness"
+    }
+}
