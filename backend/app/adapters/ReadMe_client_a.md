@@ -37,7 +37,7 @@ and end at or before `end`.
 ```
 
 | Field | Type | Required | Description |
-|-||-|-|
+|-|-|-|-|
 | `start` | datetime | yes | Earliest moment any operation may begin |
 | `end` | datetime | yes | Latest moment any operation may end |
 
@@ -64,7 +64,7 @@ of capabilities and a calendar describing when it's available.
 ```
 
 | Field | Type | Required | Description |
-|-||-|-|
+|-|-|-|-|
 | `id` | string | yes | Unique identifier - referenced in response assignments |
 | `capabilities` | string[] | yes | What this resource can do (e.g. `["fill"]` or `["label", "inspect"]`) |
 | `calendar` | `[start, end][]` | yes | Working windows during which the resource is available |
@@ -100,7 +100,7 @@ operations, each requiring a specific capability.
 ```
 
 | Field | Type | Required | Description |
-|-||-|-|
+|-|-|-|-|
 | `id` | string | yes | Unique identifier - referenced in response assignments |
 | `family` | string | yes | Family label used for changeover lookups |
 | `due` | datetime | yes | Target completion time for the last step |
@@ -109,7 +109,7 @@ operations, each requiring a specific capability.
 ### `route[]`
 
 | Field | Type | Required | Description |
-|-||-|-|
+|-|-|-|-|
 | `capability` | string | yes | Which capability is required for this step |
 | `duration_minutes` | integer > 0 | yes | How long the step takes |
 
@@ -136,7 +136,7 @@ to different families. Setup time is inserted **before** the later operation.
 ```
 
 | Field | Type | Required | Description |
-|-||-|-|
+|-|-|-|-|
 | `values` | object | yes | Map of `"from_family->to_family"` strings to integer minutes |
 
 Keys are strings of the form `"<from>-><to>"` (literal `->` separator).
@@ -162,7 +162,7 @@ Solver configuration.
 ```
 
 | Field | Type | Required | Description |
-|-||-|-|
+|-|-|-|-|
 | `time_limit_seconds` | integer | yes | Wall-clock budget for the solver |
 | `objective_mode` | string | yes | Which objective to optimize. Currently only `"min_tardiness"` is registered |
 
