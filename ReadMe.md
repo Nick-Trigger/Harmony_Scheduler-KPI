@@ -241,6 +241,8 @@ What does *not* change: `kpis.py`, `validation.py`, `solvers/`, or `domain/`. KP
 
 #### Adding a new objective
 
+See [`ObjectiveDesign_Readme.md`](./backend/app/objectives/ObjectiveDesign_Readme.md) in `objectives/` for more information.
+
 Objectives are managed by a registry (`objectives/base.py`) that maps a string name (used in `settings.objective_mode`) to a function that adds objective terms to the CP-SAT model. New objectives plug in without touching the solver.
 
 1. **Create a new module** under `objectives/` (e.g., `max_throughput.py`).
@@ -255,12 +257,11 @@ The API automatically accepts the new objective name in `settings.objective_mode
 A new constraint usually means a new property on the problem (a maintenance window, a frozen zone, a precedence between two products). The domain model captures it, the adapter parses it, the solver enforces it, and validation verifies it.
 
 1. **Extend the canonical model** in `domain/problem.py` with the new field. Use frozen dataclasses with appropriate types (`tuple`, `frozenset`, etc. - anything hashable).
-2. **Parse the new field** in each affected adapter's `parse_request`. Add the corresponding Pydantic input model fields.
-3. **Enforce the constraint** in `solvers/cpsat.py`. New constraints generally take the form of additional `model.add(...)` calls, often gated by `only_enforce_if(...)` for conditional logic.
+2. **Parse the new field** in each affected [adapter's](./backend/app/adapters/) `parse_request` method. Add the corresponding Pydantic input model fields.
+3. **Enforce the constraint** in [`solvers/cpsat.py`](./backend/app/solvers/cpsat.py). New constraints generally take the form of additional `model.add(...)` calls, often gated by `only_enforce_if(...)` for conditional logic. Follows similar logic to a problem, see [ObjectiveDesign_ReadMe.md](./backend/app/objectives/ObjectiveDesign_Readme.md).
 4. **Verify the constraint** in `validation.py`. Add a `_check_*` function that walks the solution and raises `InvariantError` if the constraint is violated. Wire it into the `validate()` orchestrator.
 5. **Add a pre-solve diagnostic** in `solvers/_diagnostics.py` if there's a structural way to detect infeasibility before invoking the solver. Optional, but improves error messages.
 
-The pattern: **domain defines, adapter parses, solver enforces, validation verifies.**
 
 #### Changing error response shapes
 
