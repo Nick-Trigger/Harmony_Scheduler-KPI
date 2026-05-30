@@ -1,0 +1,501 @@
+{
+    "horizon": {
+        "start": "2025-11-03T06:00:00",
+        "end": "2025-11-03T22:00:00"
+    },
+    "resources": [
+        {
+            "id": "Fill-1",
+            "capabilities": [
+                "fill"
+            ],
+            "calendar": [
+                [
+                    "2025-11-03T06:00:00",
+                    "2025-11-03T12:00:00"
+                ],
+                [
+                    "2025-11-03T12:30:00",
+                    "2025-11-03T18:00:00"
+                ],
+                [
+                    "2025-11-03T18:30:00",
+                    "2025-11-03T22:00:00"
+                ]
+            ]
+        },
+        {
+            "id": "Fill-2",
+            "capabilities": [
+                "fill"
+            ],
+            "calendar": [
+                [
+                    "2025-11-03T07:00:00",
+                    "2025-11-03T15:00:00"
+                ],
+                [
+                    "2025-11-03T15:45:00",
+                    "2025-11-03T22:00:00"
+                ]
+            ]
+        },
+        {
+            "id": "Fill-3",
+            "capabilities": [
+                "fill",
+                "mix"
+            ],
+            "calendar": [
+                [
+                    "2025-11-03T08:00:00",
+                    "2025-11-03T20:00:00"
+                ]
+            ]
+        },
+        {
+            "id": "Mix-1",
+            "capabilities": [
+                "mix"
+            ],
+            "calendar": [
+                [
+                    "2025-11-03T06:00:00",
+                    "2025-11-03T14:00:00"
+                ],
+                [
+                    "2025-11-03T14:30:00",
+                    "2025-11-03T22:00:00"
+                ]
+            ]
+        },
+        {
+            "id": "Label-1",
+            "capabilities": [
+                "label"
+            ],
+            "calendar": [
+                [
+                    "2025-11-03T07:00:00",
+                    "2025-11-03T19:00:00"
+                ]
+            ]
+        },
+        {
+            "id": "Label-2",
+            "capabilities": [
+                "label",
+                "inspect"
+            ],
+            "calendar": [
+                [
+                    "2025-11-03T08:00:00",
+                    "2025-11-03T13:00:00"
+                ],
+                [
+                    "2025-11-03T13:30:00",
+                    "2025-11-03T21:00:00"
+                ]
+            ]
+        },
+        {
+            "id": "Inspect-1",
+            "capabilities": [
+                "inspect"
+            ],
+            "calendar": [
+                [
+                    "2025-11-03T08:00:00",
+                    "2025-11-03T18:00:00"
+                ]
+            ]
+        },
+        {
+            "id": "Pack-1",
+            "capabilities": [
+                "pack"
+            ],
+            "calendar": [
+                [
+                    "2025-11-03T07:00:00",
+                    "2025-11-03T11:30:00"
+                ],
+                [
+                    "2025-11-03T12:00:00",
+                    "2025-11-03T16:30:00"
+                ],
+                [
+                    "2025-11-03T17:00:00",
+                    "2025-11-03T22:00:00"
+                ]
+            ]
+        },
+        {
+            "id": "Pack-2",
+            "capabilities": [
+                "pack"
+            ],
+            "calendar": [
+                [
+                    "2025-11-03T09:00:00",
+                    "2025-11-03T20:00:00"
+                ]
+            ]
+        }
+    ],
+    "changeover_matrix_minutes": {
+        "values": {
+            "standard->standard": 0,
+            "standard->premium": 20,
+            "standard->organic": 30,
+            "standard->sterile": 45,
+            "premium->standard": 20,
+            "premium->premium": 0,
+            "premium->organic": 25,
+            "premium->sterile": 30,
+            "organic->standard": 30,
+            "organic->premium": 25,
+            "organic->organic": 0,
+            "organic->sterile": 15,
+            "sterile->standard": 45,
+            "sterile->premium": 30,
+            "sterile->organic": 15,
+            "sterile->sterile": 0
+        }
+    },
+    "products": [
+        {
+            "id": "P-200",
+            "family": "standard",
+            "due": "2025-11-03T14:00:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-201",
+            "family": "standard",
+            "due": "2025-11-03T16:00:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 25
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 15
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 10
+                }
+            ]
+        },
+        {
+            "id": "P-202",
+            "family": "premium",
+            "due": "2025-11-03T15:30:00",
+            "route": [
+                {
+                    "capability": "mix",
+                    "duration_minutes": 40
+                },
+                {
+                    "capability": "fill",
+                    "duration_minutes": 35
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 25
+                },
+                {
+                    "capability": "inspect",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-203",
+            "family": "premium",
+            "due": "2025-11-03T17:00:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 40
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 20
+                }
+            ]
+        },
+        {
+            "id": "P-204",
+            "family": "organic",
+            "due": "2025-11-03T18:00:00",
+            "route": [
+                {
+                    "capability": "mix",
+                    "duration_minutes": 50
+                },
+                {
+                    "capability": "fill",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "inspect",
+                    "duration_minutes": 25
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-205",
+            "family": "organic",
+            "due": "2025-11-03T19:30:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 35
+                },
+                {
+                    "capability": "inspect",
+                    "duration_minutes": 15
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-206",
+            "family": "sterile",
+            "due": "2025-11-03T20:00:00",
+            "route": [
+                {
+                    "capability": "mix",
+                    "duration_minutes": 60
+                },
+                {
+                    "capability": "fill",
+                    "duration_minutes": 45
+                },
+                {
+                    "capability": "inspect",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 20
+                }
+            ]
+        },
+        {
+            "id": "P-207",
+            "family": "sterile",
+            "due": "2025-11-03T21:00:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 40
+                },
+                {
+                    "capability": "inspect",
+                    "duration_minutes": 25
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-208",
+            "family": "standard",
+            "due": "2025-11-03T13:00:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-209",
+            "family": "premium",
+            "due": "2025-11-03T22:00:00",
+            "route": [
+                {
+                    "capability": "mix",
+                    "duration_minutes": 35
+                },
+                {
+                    "capability": "fill",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 25
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 20
+                }
+            ]
+        },
+        {
+            "id": "P-210",
+            "family": "standard",
+            "due": "2025-11-03T17:30:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "inspect",
+                    "duration_minutes": 15
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 10
+                }
+            ]
+        },
+        {
+            "id": "P-211",
+            "family": "organic",
+            "due": "2025-11-03T20:30:00",
+            "route": [
+                {
+                    "capability": "mix",
+                    "duration_minutes": 45
+                },
+                {
+                    "capability": "fill",
+                    "duration_minutes": 35
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 25
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-212",
+            "family": "premium",
+            "due": "2025-11-03T18:30:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "inspect",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 25
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        },
+        {
+            "id": "P-213",
+            "family": "sterile",
+            "due": "2025-11-03T21:30:00",
+            "route": [
+                {
+                    "capability": "mix",
+                    "duration_minutes": 50
+                },
+                {
+                    "capability": "fill",
+                    "duration_minutes": 40
+                },
+                {
+                    "capability": "inspect",
+                    "duration_minutes": 30
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 20
+                }
+            ]
+        },
+        {
+            "id": "P-214",
+            "family": "standard",
+            "due": "2025-11-03T15:00:00",
+            "route": [
+                {
+                    "capability": "fill",
+                    "duration_minutes": 25
+                },
+                {
+                    "capability": "label",
+                    "duration_minutes": 20
+                },
+                {
+                    "capability": "pack",
+                    "duration_minutes": 15
+                }
+            ]
+        }
+    ],
+    "settings": {
+        "time_limit_seconds": 60,
+        "objective_mode": "min_tardiness"
+    }
+}

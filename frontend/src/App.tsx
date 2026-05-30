@@ -8,11 +8,16 @@ export default function App() {
   const [error, setError] = useState<InfeasibleResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSchedule() {
+  async function handleSchedule(data: any) {
     setLoading(true);
     setError(null);
     setResult(null);
-    const response = await postSchedule(exampleData);
+    if (!data || Object.keys(data).length === 0) {
+      setError({ error: "No data provided", why: ["Please provide valid schedule data."] });
+      setLoading(false);
+      return;
+    }
+    const response = await postSchedule(data);
     setLoading(false);
     if (response.ok) {
       setResult(response.data);
@@ -66,12 +71,29 @@ export default function App() {
       <div className="p-6 max-w-5xl mx-auto">
         <div className="mb-6">
           <button
-            className="btn btn-primary"
-            onClick={handleSchedule}
+            className="btn btn-primary mr-4"
+            onClick={() => handleSchedule(exampleData)}
             disabled={loading}
           >
             {loading ? "Solving..." : "Schedule example"}
           </button>
+          <button
+            className="btn btn-primary mr-4"
+            onClick={() => {
+              const text = prompt("Paste your custom data here (JSON format):");
+              if (!text) return;
+              try {
+                const payload = JSON.parse(text);
+                handleSchedule(payload);
+              } catch (err) {
+                alert(`Invalid JSON: ${err instanceof Error ? err.message : "parse failed"}`);
+              }
+            }}
+            disabled={loading}
+          >
+            {loading ? "Solving..." : "Schedule custom"}
+          </button>
+
         </div>
 
         {/* Error display */}

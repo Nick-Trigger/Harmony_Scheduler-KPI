@@ -103,129 +103,142 @@ export function Gantt({ assignments }: GanttProps) {
     const fmtTime = (iso: string) => iso.slice(11, 16);
 
     return (
-        <div className="overflow-x-auto">
-            <svg width={CHART_WIDTH} height={svgHeight} style={{ background: "#fafafa" }}>
-                {/* Resource rows */}
-                {resources.map((resource, i) => {
-                    const y = TOP_PADDING + i * (ROW_HEIGHT + ROW_GAP);
-                    return (
-                        <g key={`row-${resource}`}>
-                            {/* Resource label */}
-                            <text
-                                x={LABEL_WIDTH + PADDING - 6}
-                                y={y + ROW_HEIGHT / 2 + 4}
-                                fontSize="14"
-                                fontWeight="600"
-                                fill="black"
-                                textAnchor="end"
-                            >
-                                {resource}
-                            </text>
+        <>
+            <div className="overflow-x-auto">
+                <svg width={CHART_WIDTH} height={svgHeight} style={{ background: "#fafafa" }}>
+                    {/* Resource rows */}
+                    {resources.map((resource, i) => {
+                        const y = TOP_PADDING + i * (ROW_HEIGHT + ROW_GAP);
+                        return (
+                            <g key={`row-${resource}`}>
+                                {/* Resource label */}
+                                <text
+                                    x={LABEL_WIDTH + PADDING - 6}
+                                    y={y + ROW_HEIGHT / 2 + 4}
+                                    fontSize="14"
+                                    fontWeight="600"
+                                    fill="black"
+                                    textAnchor="end"
+                                >
+                                    {resource}
+                                </text>
 
-                            {/* Row background */}
-                            <rect
-                                x={chartX}
-                                y={y}
-                                width={chartW}
-                                height={ROW_HEIGHT}
-                                fill="white"
-                                stroke="lightgrey"
+                                {/* Row background */}
+                                <rect
+                                    x={chartX}
+                                    y={y}
+                                    width={chartW}
+                                    height={ROW_HEIGHT}
+                                    fill="white"
+                                    stroke="lightgrey"
+                                />
+                            </g>
+                        );
+                    })}
+
+                    {/* Time axis */}
+                    {ticks.map((tick) => (
+                        <g key={`tick-${tick.key}`}>
+                            <line
+                                x1={tick.x}
+                                y1={TOP_PADDING - 10}
+                                x2={tick.x}
+                                y2={svgHeight - 10}
+                                stroke={tick.isHour ? "black" : "darkgrey"}
+                                strokeWidth={tick.isHour ? 1 : 1}
                             />
+                            <text
+                                x={tick.x}
+                                y={TOP_PADDING - 16}
+                                fontSize={tick.isHour ? 13 : 10}
+                                fill={tick.isHour ? "black" : "darkgrey"}
+                                textAnchor="middle"
+                            >
+                                {tick.label}
+                            </text>
                         </g>
-                    );
-                })}
+                    ))}
 
-                {/* Time axis */}
-                {ticks.map((tick) => (
-                    <g key={`tick-${tick.key}`}>
-                        <line
-                            x1={tick.x}
-                            y1={TOP_PADDING - 10}
-                            x2={tick.x}
-                            y2={svgHeight - 10}
-                            stroke={tick.isHour ? "black" : "darkgrey"}
-                            strokeWidth={tick.isHour ? 1 : 1}
+                    {/* Assignment bars (drawn last so they sit on top of gridlines) */}
+                    {resources.map((resource, i) => {
+                        const y = TOP_PADDING + i * (ROW_HEIGHT + ROW_GAP);
+                        return (
+                            <g key={`bars-${resource}`}>
+                                {byResource[resource].map((a) => {
+                                    const bx = toX(a.start);
+                                    const bx2 = toX(a.end);
+                                    const bw = Math.max(2, bx2 - bx);
+                                    const barKey = `${a.product}-${a.step_index}-${a.resource}`;
+                                    return (
+                                        <g key={barKey}>
+                                            <rect
+                                                x={bx}
+                                                y={y + 4}
+                                                width={bw}
+                                                height={ROW_HEIGHT - 8}
+                                                fill="#fff"
+                                                rx={3}
+                                            />
+                                            {/* Colored overlay — translucent, sits on the white below */}
+                                            <rect
+                                                x={bx}
+                                                y={y + 4}
+                                                width={bw}
+                                                height={ROW_HEIGHT - 8}
+                                                fill={colorOf(a.product)}
+                                                fillOpacity={ASSIGNMENT_FILL_OPACITY}
+                                                stroke={colorOf(a.product)}
+                                                strokeWidth={ASSIGNMENT_STROKE_WIDTH}
+                                                rx={3}
+                                            />
+                                            <title>
+                                                {a.product} step {a.step_index} ({a.capability})
+                                                {"\n"}
+                                                {fmtTime(a.start)} → {fmtTime(a.end)}
+                                            </title>
+                                            {bw > 60 && (
+                                                <>
+                                                    <text
+                                                        x={bx + bw / 2}
+                                                        y={y + ROW_HEIGHT / 2 - 2}
+                                                        fontSize="12"
+                                                        fill="black"
+                                                        fontWeight="600"
+                                                        textAnchor="middle"
+                                                    >
+                                                        {a.product}, #{a.step_index}
+                                                    </text>
+                                                    <text
+                                                        x={bx + bw / 2}
+                                                        y={y + ROW_HEIGHT / 2 + 12}
+                                                        fontSize="10"
+                                                        fill="black"
+                                                        fillOpacity="0.85"
+                                                        textAnchor="middle"
+                                                    >
+                                                        {fmtTime(a.start)}-{fmtTime(a.end)}
+                                                    </text>
+                                                </>
+                                            )}
+                                        </g>
+                                    );
+                                })}
+                            </g>
+                        );
+                    })}
+                </svg>
+            </div>
+            <div className="mt-4 flex gap-4 flex-wrap overflow-x-auto">
+                {products.map((p) => (
+                    <div key={`legend-${p}`} className="flex items-center gap-2">
+                        <span
+                            className="inline-block w-4 h-4 rounded"
+                            style={{ background: colorOf(p) }}
                         />
-                        <text
-                            x={tick.x}
-                            y={TOP_PADDING - 16}
-                            fontSize={tick.isHour ? 13 : 10}
-                            fill={tick.isHour ? "black" : "darkgrey"}
-                            textAnchor="middle"
-                        >
-                            {tick.label}
-                        </text>
-                    </g>
+                        <span className="text-sm">{p}</span>
+                    </div>
                 ))}
-
-                {/* Assignment bars (drawn last so they sit on top of gridlines) */}
-                {resources.map((resource, i) => {
-                    const y = TOP_PADDING + i * (ROW_HEIGHT + ROW_GAP);
-                    return (
-                        <g key={`bars-${resource}`}>
-                            {byResource[resource].map((a) => {
-                                const bx = toX(a.start);
-                                const bx2 = toX(a.end);
-                                const bw = Math.max(2, bx2 - bx);
-                                const barKey = `${a.product}-${a.step_index}-${a.resource}`;
-                                return (
-                                    <g key={barKey}>
-                                        <rect
-                                            x={bx}
-                                            y={y + 4}
-                                            width={bw}
-                                            height={ROW_HEIGHT - 8}
-                                            fill="#fff"
-                                            rx={3}
-                                        />
-                                        {/* Colored overlay — translucent, sits on the white below */}
-                                        <rect
-                                            x={bx}
-                                            y={y + 4}
-                                            width={bw}
-                                            height={ROW_HEIGHT - 8}
-                                            fill={colorOf(a.product)}
-                                            fillOpacity={ASSIGNMENT_FILL_OPACITY}
-                                            stroke={colorOf(a.product)}
-                                            strokeWidth={ASSIGNMENT_STROKE_WIDTH}
-                                            rx={3}
-                                        />
-                                        <title>
-                                            {a.product} step {a.step_index} ({a.capability})
-                                            {"\n"}
-                                            {fmtTime(a.start)} → {fmtTime(a.end)}
-                                        </title>
-                                        {bw > 60 && (
-                                            <>
-                                                <text
-                                                    x={bx + bw / 2}
-                                                    y={y + ROW_HEIGHT / 2 - 2}
-                                                    fontSize="12"
-                                                    fill="black"
-                                                    fontWeight="600"
-                                                    textAnchor="middle"
-                                                >
-                                                    {a.product}, #{a.step_index}
-                                                </text>
-                                                <text
-                                                    x={bx + bw / 2}
-                                                    y={y + ROW_HEIGHT / 2 + 12}
-                                                    fontSize="10"
-                                                    fill="black"
-                                                    fillOpacity="0.85"
-                                                    textAnchor="middle"
-                                                >
-                                                    {fmtTime(a.start)}-{fmtTime(a.end)}
-                                                </text>
-                                            </>
-                                        )}
-                                    </g>
-                                );
-                            })}
-                        </g>
-                    );
-                })}
-            </svg>
-        </div>
+            </div>
+        </>
     );
 }
