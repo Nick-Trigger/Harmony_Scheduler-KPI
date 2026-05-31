@@ -141,6 +141,7 @@ Tests run automatically on every push and pull request via GitHub Actions
 ```txt
 backend/app/
 ├── api/                     # FastAPI route handlers
+│   ├── _router_factory.py      # ClientConfig + register_client
 │   ├── errors.py               # Exception HTTP response mapping
 │   └── schedule.py             # POST /schedule
 ├── adapters/                # Client-specific I/O shapes
@@ -214,22 +215,46 @@ reason" requirement and the bonus rubric's call for cleaner diagnostics.
 
 ##### Changing the input format
 
-  When the goal is to accept a different JSON shape (e.g., Client B with renamed ERP fields or restructured arrays), the canonical model already represents what the solver actually needs. Only the translation layer changes.
+When the goal is to accept a different JSON shape (e.g., Client B with renamed ERP fields or restructured arrays), the canonical model already represents what the solver actually needs. Only the translation layer and a small route file change.
 
-  1. **Create a new adapter module** under `adapters/` (e.g., `client_b.py`) that implements the `Adapter` protocol from `adapters/base.py`. The two functions are `parse_request` (incoming JSON to canonical `SchedulingProblem`) and `format_response` (canonical `Solution` and KPIs to outgoing JSON).
-  2. **Define Pydantic models** at the top of that adapter for Client B's request shape. Keep them module-private so nothing else in the codebase can import them.
-  3. **Register a new route** under `api/` (typically a sibling to `schedule.py`, e.g. `schedule_client_b.py`) that uses the new adapter. The route handler runs the same pipeline as Client A: parse &rarr; solve &rarr; validate &rarr; KPIs &rarr; format (see [Request Flow](#request-flow)).
-  4. **Wire the new router** into `main.py` via `app.include_router(...)`.
-  What does *not* change: `domain/`, `solvers/`, `objectives/`, `constraints/`, `kpis.py`, `validation.py`. If any of those need touching to accommodate Client B, the domain model is missing a concept and should be extended there instead.
+1. **Create a new adapter module** under `adapters/` (e.g., `client_b.py`) that implements the `Adapter` protocol from `adapters/base.py`. The two functions are `parse_request` (incoming JSON &rarr; canonical `SchedulingProblem`) and `format_response` (canonical `Solution` + KPIs &rarr; outgoing JSON).
+2. **Define Pydantic models** at the top of that adapter for Client B's request shape. Keep them module-private so nothing else in the codebase can import them.
+3. **Create a sibling route file** under `api/` (e.g., `schedule_client_b.py`) that wires up the new adapter via `register_client`:
+
+   ```python
+   from fastapi import APIRouter
+
+   from app.adapters import client_b
+   from app.api._router_factory import ClientConfig, register_client
+
+   router = APIRouter()
+
+   register_client(
+       router=router,
+       config=ClientConfig(
+           request_model=client_b.ClientBRequest,
+           adapter=client_b,
+           endpoint="/schedule",   # or "/clients/b/schedule" for a prefix
+       ),
+   )
+   ```
+
+   The pipeline body (parse &rarr; solve &rarr; validate &rarr; KPIs &rarr; format) lives in `api/_router_factory.py` and isn't duplicated per client.
+
+4. **Wire the new router** into `main.py` via `app.include_router(...)`.
+
+What does *not* change: `domain/`, `solvers/`, `objectives/`, `constraints/`, `kpis.py`, `validation.py`, `api/_router_factory.py`. If any of those need touching to accommodate Client B, the domain model is missing a concept and should be extended there instead.
 
 ##### Changing the response output format
 
-The response shape is owned entirely by the adapter that produced it. Field names, nesting datetime formats, and computed metadata can all change without affecting anything else.
+The response shape is owned entirely by the adapter that produced it. Field names, nesting, datetime formats, and computed metadata can all change without affecting anything else.
 
-1. **Locate `format_response`** in the relevant adapter (eg: `adapters/client_a.py` for Client A).
-2. **Modify the dict literal** that the function returns. Rename keys, restructure, add derived fields, change datetime formatting - whatever the new contract requires.
+1. **Locate `format_response`** in the relevant adapter (e.g., `adapters/client_a.py` for Client A).
+2. **Modify the dict literal** that the function returns. Rename keys, restructure, add derived fields, change datetime formatting — whatever the new contract requires.
 3. **Update the frontend's TypeScript types** in `frontend/src/api.tsx` to match the new response shape, if the frontend is the consumer.
-4. **If the new format needs problem context** (e.g. emitting each product's family on each assignment), accept `problem: SchedulingProblem` as an extra parameter to `format_response` and pass it through from the API handler in `api/schedule.py`. What does *not* change: `kpis.py`, `validation.py`, `solvers/`, `constraints/`, or `domain/`. KPIs and validation work on the canonical `Solution`, not the wire format.
+4. **If the new format needs problem context** (e.g. emitting each product's family on each assignment), accept `problem: SchedulingProblem` as an extra parameter to `format_response` and pass it through from `api/_router_factory.py::register_client`.
+
+What does *not* change: `kpis.py`, `validation.py`, `solvers/`, `constraints/`, or `domain/`. KPIs and validation work on the canonical `Solution`, not the wire format.
 
 #### Adding a new objective
 

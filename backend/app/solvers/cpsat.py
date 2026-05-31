@@ -23,18 +23,18 @@ from app.objectives.base import get as get_objective
 
 def solve(problem: SchedulingProblem) -> Solution:
     
-    pre_reasons = diagnose_infeasibility(problem)
-    if pre_reasons:
+    # Pre-validation: check for obvious infeasibility before building the model.
+    if pre_reasons := diagnose_infeasibility(problem):
         raise InfeasibleError(pre_reasons)
-    
+
     horizon_start = problem.horizon.start
     horizon_end_min = to_minutes(problem.horizon.end, horizon_start)
 
     model = cp_model.CpModel()
 
-    # Build operation variables and collect them per resource for no-overlap. Horizon are enforced intrinsically here through how the variables are constructed.
+    # Build operation variables and collect them per resource for no-overlap.
     op_vars = _build_all_op_vars(model, problem, horizon_start, horizon_end_min)
-    
+
     # Apply registered constraints to the model.
     for constraint in all_constraints():
         constraint.add_to_model(model, op_vars, problem)
@@ -47,7 +47,7 @@ def solve(problem: SchedulingProblem) -> Solution:
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = float(problem.settings.time_limit_seconds)
 
-    # --- Determinism: fix worker count and random seed. ---
+    # Determinism: fix worker count and random seed. 
     solver.parameters.num_search_workers = 1
     solver.parameters.random_seed = 42
 

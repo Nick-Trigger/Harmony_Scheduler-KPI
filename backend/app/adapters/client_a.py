@@ -57,7 +57,7 @@ class _SettingsIn(BaseModel):
     objective_mode: str
 
 
-class ClientARequest(BaseModel):
+class ClientRequest(BaseModel):
     horizon: _HorizonIn
     resources: list[_ResourceIn]
     products: list[_ProductIn]
@@ -76,7 +76,7 @@ class ClientARequest(BaseModel):
 
 def parse_request(payload: dict[str, Any]) -> SchedulingProblem:
     "Translate the client A request payload into a canonical SchedulingProblem"
-    request = ClientARequest.model_validate(payload)
+    request = ClientRequest.model_validate(payload)
 
     horizon = Horizon(
         start=request.horizon.start,

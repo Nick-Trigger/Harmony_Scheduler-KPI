@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.errors import register_handlers
-from app.api.schedule import router as schedule_router
 
 app = FastAPI(
     title="Scheduling API",
@@ -18,6 +17,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+from app.api.schedule import router as schedule_router
 app.include_router(schedule_router)
 register_handlers(app)
 
