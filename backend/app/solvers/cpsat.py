@@ -22,6 +22,11 @@ from app.objectives.base import get as get_objective
 
 
 def solve(problem: SchedulingProblem) -> Solution:
+    
+    pre_reasons = diagnose_infeasibility(problem)
+    if pre_reasons:
+        raise InfeasibleError(pre_reasons)
+    
     horizon_start = problem.horizon.start
     horizon_end_min = to_minutes(problem.horizon.end, horizon_start)
 

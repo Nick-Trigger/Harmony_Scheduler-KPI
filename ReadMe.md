@@ -141,25 +141,21 @@ Tests run automatically on every push and pull request via GitHub Actions
 ```txt
 backend/app/
 ├── api/                     # FastAPI route handlers
-│   ├── errors.py               # Exception &rarr; HTTP response mapping
+│   ├── errors.py               # Exception HTTP response mapping
 │   └── schedule.py             # POST /schedule
 ├── adapters/                # Client-specific I/O shapes
-│   ├── base.py                 # Adapter protocol
-│   └── client_a.py             # Client A request/response shape
-├── domain/                  # Canonical, client-agnostic data model
-│   ├── problem.py              # SchedulingProblem, Resource, Product, Operation
-│   └── solution.py             # Solution, Assignment
+├── domain/                  # Canonical, client-agnostic pydantic data models
 ├── solvers/                 # Constraint solvers
 │   ├── _diagnostics.py         # Pre-solve infeasibility checks
 │   ├── _op_vars.py             # Shared CP-SAT operation variables
 │   ├── _time.py                # Minute-since-horizon helpers
 │   ├── base.py                 # Solver protocol + InfeasibleError
+│   ├── helpers.py             # Shared CP-SAT helpers (e.g. resource_presence)
 │   └── cpsat.py                # OR-Tools CP-SAT implementation
-├── objectives/              # Objective functions (registry-based)
-│   ├── base.py                 # ObjectiveFn protocol + registry
-│   └── min_tardiness.py        # The implemented objective
+├── constraints/             # Hard constraints 
+├── objectives/              # Objective functions
 ├── kpis.py                  # KPI calculation from canonical Solution
-├── validation.py            # Post-solve invariant checks
+├── validation.py            # Post-solve invariant orchestrator
 └── main.py                  # FastAPI app composition
 
 frontend/src/
@@ -176,9 +172,9 @@ When `POST /schedule` is called, the request passes through these steps in order
 
 1. **Parse**: `adapters/{client}.py::parse_request` validates the JSON shape (via Pydantic) and translates it into the canonical `SchedulingProblem`.
 2. **Diagnose**: `solvers/_diagnostics.py` runs pre-solve structural checks (missing capabilities, windows too short for any op, demand exceeding capacity, deadlines before the minimum achievable completion time). If any check fails, an `InfeasibleError` is raised with concrete reasons and the request short-circuits to a 422 response.
-3. **Solve**: `solvers/cpsat.py::solve` builds the CP-SAT model (interval vars, no-overlap, precedence, calendars, changeovers, objective) and runs the solver. Returns a canonical `Solution`.
-4. **Validate**: `validation.py::validate` independently re-checks the solution against every hard constraint. Catches solver bugs. Raises `InvariantError` on failure (mapped to a 500, representing a model failure).
-5. **Compute KPIs**: `kpis.py::compute_kpis` derives tardiness, changeover count and minutes, makespan, and per-resource utilization from the canonical `Solution`.
+3. **Solve**: `solvers/cpsat.py::solve` builds the CP-SAT model by constructing `OpVars` for every operation, walking the constraint registry (each constraint adds its model-side enforcement), applying the selected objective, and running the solver. Returns a canonical `Solution`.
+4. **Compute KPIs**: `kpis.py::compute_kpis` derives tardiness, changeover count and minutes, makespan, and per-resource utilization from the canonical `Solution`.
+5. **Validate**: `validation.py::validate` walks the constraint registry again, asking each registered constraint to independently re-check its invariant against the final `Solution`. Catches solver bugs. Raises `InvariantError` on failure (mapped to a 500, representing a model failure).
 6. **Format**: `adapters/{client}.py::format_response` translates the canonical `Solution` + KPIs back into Client's response shape and FastAPI returns it as the 200 body.
 
 The solver, KPI calculator, and validator operate **only** on canonical domain types. Client-specific field names and shapes are confined to `adapters/`.
@@ -187,14 +183,16 @@ The solver, KPI calculator, and validator operate **only** on canonical domain t
 
 The system is designed around a strict separation between **canonical** types (client-agnostic, used by the solver, KPIs, and validation) and **adapter** types (client-specific JSON shapes). Every layer downstream of the adapter speaks the same vocabulary, regardless of which client sent the request.
 
-This means almost any change including supporting a new client, adding an objective, adding a constraint, reshaping the response is a *localized* change affecting one or two files. The sections under [Making Changes](#making-changes) describe what touches what for each kind of change.
+Three plug-in registries follow the same pattern across the codebase:
+
+- **`adapters/`** - one file per client wire format
+- **`objectives/`** - one file per objective function
+- **`constraints/`** - one file per hard constraint
+This means almost any change including supporting a new client, adding an objective, adding a constraint, or reshaping the response is a *localized* change affecting one or two files. The sections under [Making Changes](#making-changes) describe what touches what for each kind of change.
 
 ### Solver Choice & Approach
 
-**Solver: OR-Tools CP-SAT.** Native support for interval variables, no-overlap
-constraints, and optional intervals (used for resource assignment) made CP-SAT
-a much better fit than a MIP or hand-rolled heuristic. For instances of the
-size described in the spec, it solves in well under a second.
+**Solver: OR-Tools CP-SAT.** Native support for interval variables, no-overlap constraints, and optional intervals (used for resource assignment) made CP-SAT a much better fit than a MIP or hand-rolled heuristic.
 
 **Modeling strategy:**
 
@@ -204,7 +202,6 @@ size described in the spec, it solves in well under a second.
 - Family-dependent changeovers via the standard disjunctive pattern - one boolean per unordered pair selects the ordering, and the setup constraint for the chosen direction is enforced.
 - Tardiness via `tardiness >= last_op.end - due`, lower-bounded at zero, summed and minimized.
 - Determinism via `num_search_workers=1` and a fixed random seed.
-
 **Pre-solve diagnostics.** For common infeasibility causes (missing capabilities,
 windows too short, capacity below demand-plus-min-changeover-overhead, deadlines
 before achievable completion), the system flags the issue *before* invoking
@@ -219,14 +216,11 @@ reason" requirement and the bonus rubric's call for cleaner diagnostics.
 
   When the goal is to accept a different JSON shape (e.g., Client B with renamed ERP fields or restructured arrays), the canonical model already represents what the solver actually needs. Only the translation layer changes.
 
-  1. **Create a new adapter module** under `adapters/` (e.g., `client_b.py`) that implements the `Adapter` protocol from `adapters/base.py`. The two functions are `parse_request` (incoming JSON &rarr; canonical `SchedulingProblem`) and `format_response` (canonical `Solution` + KPIs &rarr; outgoing JSON).
+  1. **Create a new adapter module** under `adapters/` (e.g., `client_b.py`) that implements the `Adapter` protocol from `adapters/base.py`. The two functions are `parse_request` (incoming JSON to canonical `SchedulingProblem`) and `format_response` (canonical `Solution` and KPIs to outgoing JSON).
   2. **Define Pydantic models** at the top of that adapter for Client B's request shape. Keep them module-private so nothing else in the codebase can import them.
   3. **Register a new route** under `api/` (typically a sibling to `schedule.py`, e.g. `schedule_client_b.py`) that uses the new adapter. The route handler runs the same pipeline as Client A: parse &rarr; solve &rarr; validate &rarr; KPIs &rarr; format (see [Request Flow](#request-flow)).
   4. **Wire the new router** into `main.py` via `app.include_router(...)`.
-
-  What does *not* change: `domain/`, `solvers/`, `objectives/`, `kpis.py`,
-  `validation.py`. If any of those need touching to accommodate Client B, the
-  domain model is missing a concept and should be extended there instead.
+  What does *not* change: `domain/`, `solvers/`, `objectives/`, `constraints/`, `kpis.py`, `validation.py`. If any of those need touching to accommodate Client B, the domain model is missing a concept and should be extended there instead.
 
 ##### Changing the response output format
 
@@ -235,13 +229,11 @@ The response shape is owned entirely by the adapter that produced it. Field name
 1. **Locate `format_response`** in the relevant adapter (eg: `adapters/client_a.py` for Client A).
 2. **Modify the dict literal** that the function returns. Rename keys, restructure, add derived fields, change datetime formatting - whatever the new contract requires.
 3. **Update the frontend's TypeScript types** in `frontend/src/api.tsx` to match the new response shape, if the frontend is the consumer.
-4. **If the new format needs problem context** (e.g. emitting each product's family on each assignment), accept `problem: SchedulingProblem` as an extra parameter to `format_response` and pass it through from the API handler in `api/schedule.py`.
-
-What does *not* change: `kpis.py`, `validation.py`, `solvers/`, or `domain/`. KPIs and validation work on the canonical `Solution`, not the wire format.
+4. **If the new format needs problem context** (e.g. emitting each product's family on each assignment), accept `problem: SchedulingProblem` as an extra parameter to `format_response` and pass it through from the API handler in `api/schedule.py`. What does *not* change: `kpis.py`, `validation.py`, `solvers/`, `constraints/`, or `domain/`. KPIs and validation work on the canonical `Solution`, not the wire format.
 
 #### Adding a new objective
 
-See [`ObjectiveDesign_Readme.md`](./backend/app/objectives/ObjectiveDesign_Readme.md) in `objectives/` for more information.
+See [`ObjectiveDesign_Readme.md`](./backend/app/objectives/ObjectiveDesign_Readme.md) in `objectives/` for the full internal reference.
 
 Objectives are managed by a registry (`objectives/base.py`) that maps a string name (used in `settings.objective_mode`) to a function that adds objective terms to the CP-SAT model. New objectives plug in without touching the solver.
 
@@ -249,19 +241,22 @@ Objectives are managed by a registry (`objectives/base.py`) that maps a string n
 2. **Implement `add_to_model(model, op_vars, problem)`**, which is a function that adds the relevant decision variables and calls `model.minimize(...)` or `model.maximize(...)`.
 3. **Register it at module load** with `register("max_throughput", add_to_model)` at the bottom of the file.
 4. **Import the new module** in `objectives/__init__.py` so registration runs on app startup.
-
 The API automatically accepts the new objective name in `settings.objective_mode` and returns a 400 for unknown values.
 
 #### Adding a new constraint
 
-A new constraint usually means a new property on the problem (a maintenance window, a frozen zone, a precedence between two products). The domain model captures it, the adapter parses it, the solver enforces it, and validation verifies it.
+See [`ConstraintDesign_README.md`](./backend/app/constraints/ConstraintDesign_README.md) in `constraints/` for the full internal reference.
 
-1. **Extend the canonical model** in `domain/problem.py` with the new field. Use frozen dataclasses with appropriate types (`tuple`, `frozenset`, etc. - anything hashable).
-2. **Parse the new field** in each affected [adapter's](./backend/app/adapters/) `parse_request` method. Add the corresponding Pydantic input model fields.
-3. **Enforce the constraint** in [`solvers/cpsat.py`](./backend/app/solvers/cpsat.py). New constraints generally take the form of additional `model.add(...)` calls, often gated by `only_enforce_if(...)` for conditional logic. Follows similar logic to a problem, see [ObjectiveDesign_ReadMe.md](./backend/app/objectives/ObjectiveDesign_Readme.md).
-4. **Verify the constraint** in `validation.py`. Add a `_check_*` function that walks the solution and raises `InvariantError` if the constraint is violated. Wire it into the `validate()` orchestrator.
-5. **Add a pre-solve diagnostic** in `solvers/_diagnostics.py` if there's a structural way to detect infeasibility before invoking the solver. Optional, but improves error messages.
+Constraints are also managed by a registry (`constraints/base.py`). Each constraint module owns both its model-side enforcement (`add_to_model`) and its post-solve validation (`validate`). The solver and validator are thin orchestrators that walk the registry.
 
+1. **Create a new module** under `constraints/` (e.g., `forbidden_zone.py`).
+2. **Implement a `Constraint` class** with a `name`, an `add_to_model(model, op_vars, problem)` method, and a `validate(solution, problem)` method.
+3. **Register it at module load** with `register(ForbiddenZoneConstraint())` at the bottom of the file.
+4. **Import the new module** in `constraints/__init__.py` so registration runs on app startup.
+5. **(Optional) Extend the canonical model** in `domain/problem.py` if the constraint carries new data (e.g., a list of forbidden time ranges).
+6. **(Optional) Parse the new field** in each affected [adapter's](./backend/app/adapters/) `parse_request` method if the constraint is user-supplied.
+7. **(Optional) Add a pre-solve diagnostic** in `solvers/_diagnostics.py` if there's a structural way to detect infeasibility before invoking the solver.
+The solver automatically applies the new constraint to the model, and the validator automatically re-checks it post-solve. No edits to `cpsat.py` or `validation.py` are required.
 
 #### Changing error response shapes
 
@@ -277,8 +272,6 @@ HTTP status codes and error response bodies are mapped centrally in `api/errors.
 
 - **Single solver per request.** No async queueing or job IDs. For the spec's problem size this is fine; production would want background scheduling.
 - **All timestamps are local site time.** Per spec - no timezone handling.
-- **Tardiness as the only objective.** The codebase is structured for more (registry pattern, protocol-based), but only `min_tardiness` is shipped.
-- **No persistence.** Problems aren't saved; results aren't cached. Each request is independent.
 - **Pre-solve diagnostics are a lower bound.** Some infeasibility only emerges from solver-discovered interactions - these surface as a generic "constraints are mutually unsatisfiable" message rather than a specific reason. The alternative (CP-SAT's `sufficient_assumptions_for_infeasibility`) would require restructuring the model and was deferred.
 - **Output sorted for determinism.** Assignments are sorted by `(start, product, step)` so repeated runs produce byte-identical output, satisfying the spec's determinism acceptance check.
 
@@ -379,7 +372,7 @@ Returned for unknown `objective_mode` and other client-side input errors:
 ```json
 {
   "error": "bad_request",
-  "detail": "unknown objective_mode 'foo'; available: min_tardiness"
+  "detail": "unknown objective_mode 'foo'; available: max_family_batching, min_changeovers, min_makespan, min_tardiness"
 }
 ```
 
