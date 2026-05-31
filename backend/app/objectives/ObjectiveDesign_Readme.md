@@ -89,7 +89,7 @@ To check if an op is on a specific resource (ignoring which window):
 ```python
 # True if any window-presence on resource_id is true
 on_resource = [p for (r_id, _), p in ov.presences.items() if r_id == resource_id]
-# Then OR them together - see _resource_presence helper in min_changeovers.py
+# Then OR them together - see resource_presence helper in min_changeovers.py
 ```
 
 `intervals` is the same structure but stores CP-SAT `IntervalVar`s - these are what get passed to `add_no_overlap` per resource. You typically don't need these in an objective; they're consumed by the solver's constraint layer.
@@ -358,7 +358,7 @@ def add_to_model(
 
         # Self-loops: op_i skips the resource (i.e. is placed elsewhere).
         for i, ov in enumerate(ops, start=1):
-            on_r = _resource_presence(model, ov, r_id)
+            on_r = resource_presence(model, ov, r_id)
             not_on_r = model.new_bool_var(f"skip_{ov.product_id}_s{ov.step_index}_{r_id}")
             model.add(not_on_r + on_r == 1)
             arcs.append((i, i, not_on_r))
@@ -394,7 +394,7 @@ def add_to_model(
         model.maximize(0)
 
 
-def _resource_presence(model, ov, resource_id):
+def resource_presence(model, ov, resource_id):
     window_presences = [p for (r_id, _), p in ov.presences.items() if r_id == resource_id]
     if len(window_presences) == 1:
         return window_presences[0]
