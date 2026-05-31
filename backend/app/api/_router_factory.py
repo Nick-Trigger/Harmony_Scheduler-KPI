@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Any
 
 from fastapi import APIRouter
@@ -9,31 +10,23 @@ from app.solvers.cpsat import solve
 from app.validation import validate
 
 
-class RouterFactory:
-    """Registers a scheduling endpoint on the given router using the given Pydantic request model and adapter for input/output translation."""
+@dataclass(frozen=True)
+class ClientConfig:
+    request_model: type[BaseModel]
+    adapter: Adapter
+    endpoint: str
 
-    def __init__(
-        self,
-        router: APIRouter,
-        request_model: type[BaseModel],
-        adapter: Adapter,
-        endpoint: str,
-    ) -> None:
-        self.router = router
-        self.request_model = request_model
-        self.adapter = adapter
-        self.endpoint = endpoint
 
-    def create_schedule(self) -> None:
-        # Capture into locals so the inner function doesn't depend on `self`.
-        request_model = self.request_model
-        adapter = self.adapter
+def register_client(router: APIRouter, config: ClientConfig) -> None:
+    # Capture into locals so the inner function closes over them, not `config`.
+    request_model = config.request_model
+    adapter = config.adapter
 
-        @self.router.post(self.endpoint)
-        def _create_schedule(request: request_model) -> dict[str, Any]:  # type: ignore[valid-type]
-            """Compute a production schedule and return the solution + KPIs."""
-            problem = adapter.parse_request(request.model_dump(by_alias=True))
-            solution = solve(problem)
-            validate(problem, solution)
-            kpis = compute_kpis(problem, solution)
-            return adapter.format_response(solution, kpis=kpis)
+    @router.post(config.endpoint)
+    def _create_schedule(request: request_model) -> dict[str, Any]:  # type: ignore[valid-type]
+        """Compute a production schedule and return the solution + KPIs."""
+        problem = adapter.parse_request(request.model_dump(by_alias=True))
+        solution = solve(problem)
+        validate(problem, solution)
+        kpis = compute_kpis(problem, solution)
+        return adapter.format_response(solution, kpis=kpis)

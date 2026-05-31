@@ -1,13 +1,17 @@
 from fastapi import APIRouter
 
-from app.adapters import client_a
-from app.api._router_factory import RouterFactory
 
+from app.api._router_factory import ClientConfig, register_client
 
 router = APIRouter()
-RouterFactory(
+
+
+from app.adapters import client_a
+register_client(
     router=router,
-    request_model=client_a.ClientRequest,
-    adapter=client_a,
-    endpoint="/schedule",
-).create_schedule()
+    config=ClientConfig(
+        request_model=client_a.ClientRequest,
+        adapter=client_a,  # the module exposes parse_request + format_response
+        endpoint="/schedule",
+    ),
+)
