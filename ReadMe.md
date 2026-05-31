@@ -219,29 +219,23 @@ When the goal is to accept a different JSON shape (e.g., Client B with renamed E
 
 1. **Create a new adapter module** under `adapters/` (e.g., `client_b.py`) that implements the `Adapter` protocol from `adapters/base.py`. The two functions are `parse_request` (incoming JSON &rarr; canonical `SchedulingProblem`) and `format_response` (canonical `Solution` + KPIs &rarr; outgoing JSON).
 2. **Define Pydantic models** at the top of that adapter for Client B's request shape. Keep them module-private so nothing else in the codebase can import them.
-3. **Create a sibling route file** under `api/` (e.g., `schedule_client_b.py`) that wires up the new adapter via `register_client`:
+3. **Edit api router file** under `at ./backend/api/schedule' that wires up the new adapter via `register_client` by adding a similar fragment to:
 
    ```python
-   from fastapi import APIRouter
+   [...] # other client adapters
 
    from app.adapters import client_b
-   from app.api._router_factory import ClientConfig, register_client
-
-   router = APIRouter()
-
    register_client(
        router=router,
        config=ClientConfig(
            request_model=client_b.ClientBRequest,
            adapter=client_b,
-           endpoint="/schedule",   # or "/clients/b/schedule" for a prefix
+           endpoint="/schedule",   # must be unique
        ),
    )
    ```
 
    The pipeline body (parse &rarr; solve &rarr; validate &rarr; KPIs &rarr; format) lives in `api/_router_factory.py` and isn't duplicated per client.
-
-4. **Wire the new router** into `main.py` via `app.include_router(...)`.
 
 What does *not* change: `domain/`, `solvers/`, `objectives/`, `constraints/`, `kpis.py`, `validation.py`, `api/_router_factory.py`. If any of those need touching to accommodate Client B, the domain model is missing a concept and should be extended there instead.
 
