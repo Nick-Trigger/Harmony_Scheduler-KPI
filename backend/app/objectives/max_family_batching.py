@@ -4,6 +4,8 @@ from app.domain.problem import SchedulingProblem
 from app.objectives.base import register
 from app.solvers._op_vars import OpVars
 
+from app.solvers.helpers import resource_presence
+
 
 def add_to_model(
     model: cp_model.CpModel,
@@ -31,7 +33,7 @@ def add_to_model(
 
         # Self-loops: op_i skips the resource (i.e. is placed elsewhere).
         for i, ov in enumerate(ops, start=1):
-            on_r = _resource_presence(model, ov, r_id)
+            on_r = resource_presence(model, ov, r_id)
             not_on_r = model.new_bool_var(f"skip_{ov.product_id}_s{ov.step_index}_{r_id}")
             model.add(not_on_r + on_r == 1)
             arcs.append((i, i, not_on_r))
@@ -65,17 +67,3 @@ def add_to_model(
         model.maximize(sum(same_family_adjacencies))
     else:
         model.maximize(0)
-
-
-def _resource_presence(model, ov, resource_id):
-    window_presences = [p for (r_id, _), p in ov.presences.items() if r_id == resource_id]
-    if len(window_presences) == 1:
-        return window_presences[0]
-    on_r = model.new_bool_var(f"on_{ov.product_id}_s{ov.step_index}_{resource_id}")
-    model.add_bool_or(window_presences).only_enforce_if(on_r)
-    for p in window_presences:
-        model.add_implication(p, on_r)
-    return on_r
-
-
-register("max_family_batching", add_to_model)
